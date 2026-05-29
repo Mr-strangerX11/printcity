@@ -1,4 +1,5 @@
 import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { OrdersService, CheckoutDto, UpdateOrderStatusDto } from './orders.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -12,6 +13,8 @@ import { OrderStatus } from '../common/enums';
 export class OrdersController {
   constructor(private ordersService: OrdersService) {}
 
+  // 5 checkouts per user per minute — prevents bulk order spam
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
   @Post()
   checkout(@CurrentUser('id') userId: string, @Body() dto: CheckoutDto) {
     return this.ordersService.checkout(userId, dto);

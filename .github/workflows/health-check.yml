@@ -1,0 +1,58 @@
+name: Production Health Check
+
+on:
+  schedule:
+    # Run every 5 minutes
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    name: Check Production Health
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check API health
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            --max-time 10 \
+            "${{ secrets.PRODUCTION_API_URL }}/health/status")
+
+          echo "Health check status: $STATUS"
+
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::Health check FAILED — API returned HTTP $STATUS"
+            exit 1
+          fi
+
+          echo "Health check PASSED"
+
+      - name: Check frontend
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            --max-time 10 \
+            "${{ secrets.PRODUCTION_FRONTEND_URL }}")
+
+          echo "Frontend status: $STATUS"
+
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::Frontend health check FAILED — returned HTTP $STATUS"
+            exit 1
+          fi
+
+      - name: Ping uptime monitor on success
+        if: success()
+        run: |
+          if [ -n "${{ secrets.UPTIME_PING_URL }}" ]; then
+            curl -s "${{ secrets.UPTIME_PING_URL }}" > /dev/null
+          fi
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          if [ -n "${{ secrets.SLACK_WEBHOOK_URL }}" ]; then
+            curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+              -H 'Content-type: application/json' \
+              --data '{
+                "text": "🚨 *PrintCity Production Down*\nHealth check failed at '"$(date -u)"'\nCheck: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+              }'
+          fi

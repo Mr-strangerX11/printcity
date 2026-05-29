@@ -1,7 +1,10 @@
-import { Controller, Post, Body, Get, Logger } from '@nestjs/common';
+import { Controller, Post, Body, Get, Logger, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { MailService } from '../mail/mail.service';
 import { Public } from '../common/decorators/public.decorator';
+import { Roles } from '../common/decorators/roles.decorator';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Role } from '../user/schemas/user.schema';
 
 @ApiTags('Health & Diagnostics')
 @Controller('health')
@@ -22,9 +25,10 @@ export class HealthController {
     };
   }
 
-  @Public()
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN)
   @Post('mail/test')
-  @ApiOperation({ summary: 'Test email sending (admin only - for diagnostics)' })
+  @ApiOperation({ summary: 'Test email sending (admin only)' })
   @ApiResponse({ status: 200, description: 'Email test result' })
   async testEmail(@Body() body: { email?: string }) {
     const testEmail = body?.email || 'test@example.com';
@@ -73,9 +77,10 @@ export class HealthController {
     }
   }
 
-  @Public()
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN)
   @Get('mail/diagnostics')
-  @ApiOperation({ summary: 'Get detailed mail service diagnostics' })
+  @ApiOperation({ summary: 'Get detailed mail service diagnostics (admin only)' })
   @ApiResponse({ status: 200, description: 'Mail service diagnostics' })
   getMailDiagnostics() {
     const status = this.mailService.getStatus();

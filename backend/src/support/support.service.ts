@@ -5,6 +5,7 @@ import { TicketStatus, TicketPriority } from '../common/enums';
 import { Role } from '../user/schemas/user.schema';
 import { SupportTicket, SupportTicketDocument } from './schemas/support-ticket.schema';
 import { SupportMessage, SupportMessageDocument } from './schemas/support-message.schema';
+import { sanitizeText } from '../common/utils/sanitize';
 
 @Injectable()
 export class SupportService {
@@ -27,7 +28,7 @@ export class SupportService {
     const message = await this.messageModel.create({
       ticketId: ticket._id,
       senderId: uid,
-      body: dto.message,
+      body: sanitizeText(dto.message),
       isStaff: false,
     });
 
@@ -90,7 +91,7 @@ export class SupportService {
     const message = await this.messageModel.create({
       ticketId: new Types.ObjectId(id),
       senderId: new Types.ObjectId(senderId),
-      body,
+      body: sanitizeText(body),
       isStaff: role !== Role.CUSTOMER,
       attachments: attachments ?? [],
     });

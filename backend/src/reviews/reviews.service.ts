@@ -6,6 +6,7 @@ import { Review, ReviewDocument } from './schemas/review.schema';
 import { OrderItem, OrderItemDocument } from '../orders/schemas/order-item.schema';
 import { Order, OrderDocument } from '../orders/schemas/order.schema';
 import { LoyaltyService } from '../loyalty/loyalty.service';
+import { sanitizeText } from '../common/utils/sanitize';
 
 export class CreateReviewDto {
   @IsString() productId: string;
@@ -49,7 +50,7 @@ export class ReviewsService {
       userId: uid,
       productId: pid,
       rating: dto.rating,
-      comment: dto.comment,
+      comment: sanitizeText(dto.comment),
     });
 
     // Award 10 points for review (non-critical)

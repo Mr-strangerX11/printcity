@@ -269,3 +269,111 @@ describe('OrdersService — cancelOrder', () => {
     );
   });
 });
+
+describe('OrdersService — updateStatus transitions', () => {
+  let service: OrdersService;
+  let orderModel: ReturnType<typeof makeModel>;
+  let session: ReturnType<typeof makeSession>;
+
+  beforeEach(async () => {
+    session = makeSession();
+    orderModel = makeModel();
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        OrdersService,
+        { provide: getModelToken(Order.name), useValue: orderModel },
+        { provide: getModelToken(OrderItem.name), useValue: makeModel() },
+        { provide: getModelToken(Vendor.name), useValue: makeModel() },
+        { provide: getModelToken(Product.name), useValue: makeModel() },
+        { provide: getModelToken(ProductVariant.name), useValue: makeModel() },
+        { provide: getModelToken(ProductImage.name), useValue: makeModel() },
+        { provide: getModelToken(Payment.name), useValue: makeModel() },
+        { provide: getModelToken(User.name), useValue: makeModel() },
+        { provide: getConnectionToken(), useValue: makeConnection(session) },
+        { provide: 'CartService', useValue: {} },
+        { provide: 'NotificationsService', useValue: { create: jest.fn() } },
+        { provide: 'MailService', useValue: {} },
+        { provide: 'InvoicesService', useValue: { generateForOrder: jest.fn() } },
+        { provide: 'CouponsService', useValue: {} },
+        { provide: 'LoyaltyService', useValue: { awardPoints: jest.fn() } },
+      ],
+    })
+      .overrideProvider('CartService').useValue({})
+      .overrideProvider('NotificationsService').useValue({ create: jest.fn() })
+      .overrideProvider('MailService').useValue({})
+      .overrideProvider('InvoicesService').useValue({ generateForOrder: jest.fn() })
+      .overrideProvider('CouponsService').useValue({})
+      .overrideProvider('LoyaltyService').useValue({ awardPoints: jest.fn() })
+      .compile();
+
+    service = module.get<OrdersService>(OrdersService);
+  });
+
+  it('throws NotFoundException when order does not exist', async () => {
+    orderModel.findById.mockReturnValue({ exec: jest.fn().mockResolvedValue(null) });
+    await expect(service.updateStatus(MOCK_ORDER_ID, OrderStatus.CONFIRMED, 'admin')).rejects.toThrow(NotFoundException);
+  });
+
+  it('throws BadRequestException for invalid transition PENDING → SHIPPED', async () => {
+    const order = {
+      _id: MOCK_ORDER_ID,
+      orderStatus: OrderStatus.PENDING,
+      paymentStatus: PaymentStatus.UNPAID,
+      userId: MOCK_USER_ID,
+      save: jest.fn(),
+    };
+    orderModel.findById.mockReturnValue({ exec: jest.fn().mockResolvedValue(order) });
+    await expect(service.updateStatus(MOCK_ORDER_ID, OrderStatus.SHIPPED, 'admin')).rejects.toThrow(BadRequestException);
+  });
+
+  it('allows valid transition PENDING → CONFIRMED', async () => {
+    const order = {
+      _id: MOCK_ORDER_ID,
+      orderStatus: OrderStatus.PENDING,
+      paymentStatus: PaymentStatus.PAID,
+      userId: MOCK_USER_ID,
+      totalAmount: 500,
+      save: jest.fn().mockResolvedValue({ orderStatus: OrderStatus.CONFIRMED }),
+    };
+    orderModel.findById.mockReturnValue({ exec: jest.fn().mockResolvedValue(order) });
+    const result = await service.updateStatus(MOCK_ORDER_ID, OrderStatus.CONFIRMED, 'admin');
+    expect(result).toBeDefined();
+  });
+
+  it('allows valid transition CONFIRMED → CANCELLED', async () => {
+    const order = {
+      _id: MOCK_ORDER_ID,
+      orderStatus: OrderStatus.CONFIRMED,
+      paymentStatus: PaymentStatus.UNPAID,
+      userId: MOCK_USER_ID,
+      save: jest.fn().mockResolvedValue({}),
+    };
+    orderModel.findById.mockReturnValue({ exec: jest.fn().mockResolvedValue(order) });
+    await expect(service.updateStatus(MOCK_ORDER_ID, OrderStatus.CANCELLED, 'admin')).resolves.not.toThrow();
+  });
+
+  it('throws BadRequestException for invalid transition DELIVERED → CONFIRMED', async () => {
+    const order = {
+      _id: MOCK_ORDER_ID,
+      orderStatus: OrderStatus.DELIVERED,
+      paymentStatus: PaymentStatus.PAID,
+      userId: MOCK_USER_ID,
+      save: jest.fn(),
+    };
+    orderModel.findById.mockReturnValue({ exec: jest.fn().mockResolvedValue(order) });
+    await expect(service.updateStatus(MOCK_ORDER_ID, OrderStatus.CONFIRMED, 'admin')).rejects.toThrow(BadRequestException);
+  });
+
+  it('throws BadRequestException for invalid transition CANCELLED → CONFIRMED', async () => {
+    const order = {
+      _id: MOCK_ORDER_ID,
+      orderStatus: OrderStatus.CANCELLED,
+      paymentStatus: PaymentStatus.UNPAID,
+      userId: MOCK_USER_ID,
+      save: jest.fn(),
+    };
+    orderModel.findById.mockReturnValue({ exec: jest.fn().mockResolvedValue(order) });
+    await expect(service.updateStatus(MOCK_ORDER_ID, OrderStatus.CONFIRMED, 'admin')).rejects.toThrow(BadRequestException);
+  });
+});

@@ -35,13 +35,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  useEffect(() => { fetchUser(); }, [fetchUser]);
+  /** Fetch a CSRF token from the server and store it in a module-level variable
+   *  so the api interceptor can attach it to all state-changing requests. */
+  const fetchCsrfToken = useCallback(async () => {
+    try {
+      await api.get('/auth/csrf-token');
+      // The server sets the __csrf cookie; the axios interceptor reads it from
+      // document.cookie and forwards it as X-CSRF-Token on every mutating request.
+    } catch {
+      // Non-critical — CSRF check will reject the next mutating request
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchUser();
+    fetchCsrfToken();
+  }, [fetchUser, fetchCsrfToken]);
 
   // login() is called AFTER the backend has already set httpOnly cookies.
-  // It just fetches the current user to populate client state.
+  // It refreshes user state and mints a fresh CSRF token.
   const login = async () => {
     setLoading(true);
-    await fetchUser();
+    await Promise.all([fetchUser(), fetchCsrfToken()]);
   };
 
   const logout = async () => {

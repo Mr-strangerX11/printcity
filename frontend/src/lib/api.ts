@@ -15,6 +15,19 @@ export const api = axios.create({
 
 // No Authorization header injection — tokens live in httpOnly cookies only.
 
+// CSRF: read the __csrf double-submit cookie and forward it as a header on
+// every state-changing request. The cookie is NOT httpOnly so JS can read it.
+const MUTATING = new Set(['post', 'put', 'patch', 'delete']);
+api.interceptors.request.use((config) => {
+  if (typeof document !== 'undefined' && MUTATING.has((config.method ?? '').toLowerCase())) {
+    const match = document.cookie.match(/(?:^|;\s*)__csrf=([^;]+)/);
+    if (match) {
+      config.headers['X-CSRF-Token'] = decodeURIComponent(match[1]);
+    }
+  }
+  return config;
+});
+
 let isRefreshing = false;
 let refreshQueue: Array<{ resolve: () => void; reject: (err: any) => void }> = [];
 

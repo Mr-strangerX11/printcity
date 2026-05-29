@@ -11,6 +11,7 @@ import { ProductStatus } from '../common/enums';
 import { Role } from '../user/schemas/user.schema';
 import slugify from 'slugify';
 import { parse } from 'csv-parse/sync';
+import { sanitizeRichText } from '../common/utils/sanitize';
 import { Product, ProductDocument } from './schemas/product.schema';
 import { ProductVariant, ProductVariantDocument } from './schemas/product-variant.schema';
 import { ProductImage, ProductImageDocument } from './schemas/product-image.schema';
@@ -152,7 +153,7 @@ export class ProductsService {
       categoryId: dto.categoryId ? new Types.ObjectId(dto.categoryId) : undefined,
       title: dto.title,
       slug,
-      description: dto.description,
+      description: sanitizeRichText(dto.description),
       basePrice: dto.basePrice,
       status: ProductStatus.PENDING_APPROVAL,
       tags: dto.tags ?? [],

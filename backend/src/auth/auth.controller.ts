@@ -12,6 +12,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import { Role } from '../user/schemas/user.schema';
+import { CsrfGuard } from '../common/guards/csrf.guard';
 
 const IS_PROD = process.env.NODE_ENV === 'production';
 
@@ -72,7 +73,16 @@ export class AuthController {
   logout(@Res({ passthrough: true }) res: Response) {
     res.clearCookie('accessToken', { httpOnly: true, secure: IS_PROD, sameSite: IS_PROD ? 'none' : 'lax' });
     res.clearCookie('refreshToken', { httpOnly: true, secure: IS_PROD, sameSite: IS_PROD ? 'none' : 'lax' });
+    res.clearCookie('__csrf');
     return { success: true };
+  }
+
+  /** Mint a CSRF token — call this once after login before any state-changing request. */
+  @Public()
+  @Get('csrf-token')
+  csrfToken(@Res({ passthrough: true }) res: Response) {
+    const token = CsrfGuard.issueToken(res, IS_PROD);
+    return { csrfToken: token };
   }
 
   @UseGuards(JwtAuthGuard)
