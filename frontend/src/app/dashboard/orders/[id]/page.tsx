@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { ChevronLeft, Star, XCircle, Loader2 } from 'lucide-react';
 import { ordersApi, reviewsApi } from '@/lib/api';
-import { Order } from '@/types';
+import { useOrder } from '@/hooks';
 import { formatPrice, formatDate, getErrorMsg } from '@/lib/utils';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { OrderTimeline } from '@/components/ui/OrderTimeline';
@@ -48,21 +48,16 @@ interface ReviewState {
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const [order, setOrder] = useState<Order | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: order, loading, refetch } = useOrder(id);
   const [cancelling, setCancelling] = useState(false);
   const [reviews, setReviews] = useState<Record<string, ReviewState>>({});
-
-  useEffect(() => {
-    ordersApi.get(id).then(({ data }) => setOrder(data.data)).finally(() => setLoading(false));
-  }, [id]);
 
   const handleCancel = async () => {
     if (!confirm('Are you sure you want to cancel this order?')) return;
     setCancelling(true);
     try {
       await ordersApi.cancel(id);
-      setOrder(prev => prev ? { ...prev, orderStatus: 'CANCELLED' as any } : prev);
+      refetch();
       toast.success('Order cancelled');
     } catch (err) {
       toast.error(getErrorMsg(err, 'Failed to cancel order'));

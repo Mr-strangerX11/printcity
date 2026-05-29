@@ -2,37 +2,37 @@ import { Controller, Get, Post, Patch, Param, Body, Query } from '@nestjs/common
 import { SupportService } from './support.service';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
-import { TicketStatus, TicketPriority } from '../common/enums';
+import { TicketStatus } from '../common/enums';
 import { Role } from '../user/schemas/user.schema';
 
 @Controller('support')
 export class SupportController {
   constructor(private readonly support: SupportService) {}
 
-  @Post('tickets')
+  @Post()
   create(@CurrentUser() user: any, @Body() body: any) {
     return this.support.createTicket(user.id, body);
   }
 
-  @Get('tickets')
+  @Get()
   list(@CurrentUser() user: any, @Query() query: any): Promise<any> {
     return this.support.listTickets(user.id, user.role, query);
   }
 
-  @Get('tickets/stats') @Roles(Role.ADMIN)
+  @Get('stats') @Roles(Role.ADMIN)
   stats() { return this.support.getStats(); }
 
-  @Get('tickets/:id')
+  @Get(':id')
   getOne(@Param('id') id: string, @CurrentUser() user: any): Promise<any> {
     return this.support.getTicket(id, user.id, user.role);
   }
 
-  @Post('tickets/:id/reply')
+  @Post(':id/reply')
   reply(@Param('id') id: string, @CurrentUser() user: any, @Body() body: any) {
     return this.support.replyToTicket(id, user.id, user.role, body.message, body.attachments);
   }
 
-  @Patch('tickets/:id/status') @Roles(Role.ADMIN)
+  @Patch(':id/status') @Roles(Role.ADMIN)
   updateStatus(@Param('id') id: string, @Body('status') status: TicketStatus) {
     return this.support.updateTicketStatus(id, status);
   }

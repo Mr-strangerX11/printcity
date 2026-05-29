@@ -91,18 +91,35 @@ export class ProductsService {
       this.productModel.countDocuments(filter),
     ]);
 
-    // Enrich with images, variants, vendor, category
-    const enriched = await Promise.all(
-      items.map(async (p) => {
-        const [primaryImage, variants, vendor, category] = await Promise.all([
-          this.imageModel.findOne({ productId: p._id, isPrimary: true }).lean().exec(),
-          this.variantModel.find({ productId: p._id }, { price: 1, color: 1, size: 1 }).lean().exec(),
-          this.vendorModel.findById(p.vendorId, { storeName: 1, storeSlug: 1 }).lean().exec(),
-          p.categoryId ? this.categoryModel.findById(p.categoryId, { name: 1, slug: 1 }).lean().exec() : null,
-        ]);
-        return { ...p, images: primaryImage ? [primaryImage] : [], variants, vendor, category };
-      }),
-    );
+    // Batch-fetch all related data — 4 queries total instead of N*4
+    const productIds = items.map(p => p._id);
+    const vendorIds = [...new Set(items.map(p => (p as any).vendorId?.toString()).filter(Boolean))];
+    const categoryIds = [...new Set(items.map(p => (p as any).categoryId?.toString()).filter(Boolean))];
+
+    const [primaryImages, allVariants, vendors, categories] = await Promise.all([
+      this.imageModel.find({ productId: { $in: productIds }, isPrimary: true }).lean().exec(),
+      this.variantModel.find({ productId: { $in: productIds } }, { price: 1, color: 1, size: 1 }).lean().exec(),
+      this.vendorModel.find({ _id: { $in: vendorIds } }, { storeName: 1, storeSlug: 1 }).lean().exec(),
+      this.categoryModel.find({ _id: { $in: categoryIds } }, { name: 1, slug: 1 }).lean().exec(),
+    ]);
+
+    const imageMap = new Map(primaryImages.map(img => [(img as any).productId.toString(), img]));
+    const variantsByProduct = new Map<string, any[]>();
+    for (const v of allVariants) {
+      const key = (v as any).productId.toString();
+      if (!variantsByProduct.has(key)) variantsByProduct.set(key, []);
+      variantsByProduct.get(key)!.push(v);
+    }
+    const vendorMap = new Map(vendors.map(v => [v._id.toString(), v]));
+    const categoryMap = new Map(categories.map(c => [c._id.toString(), c]));
+
+    const enriched = items.map(p => ({
+      ...p,
+      images: imageMap.has(p._id.toString()) ? [imageMap.get(p._id.toString())] : [],
+      variants: variantsByProduct.get(p._id.toString()) ?? [],
+      vendor: vendorMap.get((p as any).vendorId?.toString()) ?? null,
+      category: categoryMap.get((p as any).categoryId?.toString()) ?? null,
+    }));
 
     return {
       items: enriched,
@@ -186,11 +203,28 @@ export class ProductsService {
   }
 
   async importCsv(fileBuffer: Buffer, adminId: string): Promise<{ created: number; errors: string[] }> {
+    const CSV_MAX_BYTES = 10 * 1024 * 1024; // 10 MB
+    const CSV_MAX_ROWS = 10_000;
+    const PRICE_MAX = 1_000_000;
+    const TAG_MAX_COUNT = 20;
+    const TAG_MAX_LENGTH = 50;
+    const TITLE_MIN = 3;
+    const TITLE_MAX = 200;
+    const ALLOWED_IMAGE_HOSTS = ['res.cloudinary.com', 'cloudinary.com'];
+
+    if (fileBuffer.length > CSV_MAX_BYTES) {
+      throw new BadRequestException(`CSV file too large (max ${CSV_MAX_BYTES / 1024 / 1024} MB)`);
+    }
+
     const rows = parse(fileBuffer, {
       columns: true,
       skip_empty_lines: true,
       trim: true,
     }) as Record<string, string>[];
+
+    if (rows.length > CSV_MAX_ROWS) {
+      throw new BadRequestException(`Too many rows (max ${CSV_MAX_ROWS})`);
+    }
 
     const errors: string[] = [];
     let created = 0;
@@ -200,13 +234,53 @@ export class ProductsService {
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
+      const rowNum = i + 2;
       try {
         if (!row.title || !row.basePrice) {
-          errors.push(`Row ${i + 2}: Missing required fields (title, basePrice)`);
+          errors.push(`Row ${rowNum}: Missing required fields (title, basePrice)`);
           continue;
         }
 
-        const slug = await this.generateUniqueSlug(row.title);
+        // Title length validation
+        const title = row.title.trim();
+        if (title.length < TITLE_MIN || title.length > TITLE_MAX) {
+          errors.push(`Row ${rowNum}: title must be ${TITLE_MIN}–${TITLE_MAX} characters`);
+          continue;
+        }
+
+        // Price range validation (prevents negative prices and integer overflow)
+        const price = parseFloat(row.basePrice);
+        if (isNaN(price) || price < 0 || price > PRICE_MAX) {
+          errors.push(`Row ${rowNum}: basePrice must be between 0 and ${PRICE_MAX}`);
+          continue;
+        }
+
+        // Image URL must be from an allowed host (prevents SSRF)
+        if (row.imageUrl) {
+          try {
+            const parsed = new URL(row.imageUrl);
+            if (!ALLOWED_IMAGE_HOSTS.some(h => parsed.hostname === h || parsed.hostname.endsWith('.' + h))) {
+              errors.push(`Row ${rowNum}: imageUrl must be a Cloudinary URL`);
+              continue;
+            }
+          } catch {
+            errors.push(`Row ${rowNum}: imageUrl is not a valid URL`);
+            continue;
+          }
+        }
+
+        // Tags: limit count and length
+        const rawTags = row.tags ? row.tags.split('|').map(t => t.trim()).filter(Boolean) : [];
+        if (rawTags.length > TAG_MAX_COUNT) {
+          errors.push(`Row ${rowNum}: too many tags (max ${TAG_MAX_COUNT})`);
+          continue;
+        }
+        if (rawTags.some(t => t.length > TAG_MAX_LENGTH)) {
+          errors.push(`Row ${rowNum}: a tag exceeds max length of ${TAG_MAX_LENGTH}`);
+          continue;
+        }
+
+        const slug = await this.generateUniqueSlug(title);
         let categoryId: Types.ObjectId | undefined;
         if (row.category) {
           const cat = await this.categoryModel.findOne({ name: { $regex: `^${row.category}$`, $options: 'i' } }).lean().exec();
@@ -216,12 +290,12 @@ export class ProductsService {
         const product = await this.productModel.create({
           vendorId: firstVendor._id,
           categoryId,
-          title: row.title,
+          title,
           slug,
           description: row.description ?? '',
-          basePrice: parseFloat(row.basePrice),
+          basePrice: price,
           status: ProductStatus.ACTIVE,
-          tags: row.tags ? row.tags.split('|').map((t) => t.trim()) : [],
+          tags: rawTags,
         });
 
         if (row.imageUrl) {
@@ -230,7 +304,7 @@ export class ProductsService {
 
         created++;
       } catch (err: any) {
-        errors.push(`Row ${i + 2}: ${err.message}`);
+        errors.push(`Row ${rowNum}: ${err.message}`);
       }
     }
 
@@ -245,6 +319,33 @@ export class ProductsService {
     await Promise.all(
       users.map((u) => this.mail.sendWishlistPriceAlert(u.email, u.name, [{ title, oldPrice, newPrice, slug }])),
     );
+  }
+
+  async getStats() {
+    const [total, activeVendorsResult, topProductsResult] = await Promise.all([
+      this.productModel.countDocuments({ status: 'ACTIVE' }),
+      this.vendorModel.countDocuments({ status: 'ACTIVE' }),
+      this.productModel
+        .find({ status: 'ACTIVE' })
+        .sort({ salesCount: -1 })
+        .limit(5)
+        .lean()
+        .exec(),
+    ]);
+
+    // Batch-fetch vendors for top products in one query
+    const topVendorIds = [...new Set(topProductsResult.map(p => (p as any).vendorId?.toString()).filter(Boolean))];
+    const topVendors = await this.vendorModel.find({ _id: { $in: topVendorIds } }, { storeName: 1 }).lean().exec();
+    const topVendorMap = new Map(topVendors.map(v => [v._id.toString(), v]));
+
+    const topProducts = topProductsResult.map(p => ({
+      id: p._id,
+      title: p.title,
+      orderCount: (p as any).salesCount ?? 0,
+      vendor: topVendorMap.get((p as any).vendorId?.toString()) ?? null,
+    }));
+
+    return { total, activeVendors: activeVendorsResult, topProducts };
   }
 
   private async generateUniqueSlug(title: string): Promise<string> {

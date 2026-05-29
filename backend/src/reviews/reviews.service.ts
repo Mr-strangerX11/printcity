@@ -5,6 +5,7 @@ import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import { Review, ReviewDocument } from './schemas/review.schema';
 import { OrderItem, OrderItemDocument } from '../orders/schemas/order-item.schema';
 import { Order, OrderDocument } from '../orders/schemas/order.schema';
+import { LoyaltyService } from '../loyalty/loyalty.service';
 
 export class CreateReviewDto {
   @IsString() productId: string;
@@ -18,6 +19,7 @@ export class ReviewsService {
     @InjectModel(Review.name) private reviewModel: Model<ReviewDocument>,
     @InjectModel(OrderItem.name) private orderItemModel: Model<OrderItemDocument>,
     @InjectModel(Order.name) private orderModel: Model<OrderDocument>,
+    private loyaltyService: LoyaltyService,
   ) {}
 
   async create(userId: string, dto: CreateReviewDto) {
@@ -49,6 +51,9 @@ export class ReviewsService {
       rating: dto.rating,
       comment: dto.comment,
     });
+
+    // Award 10 points for review (non-critical)
+    this.loyaltyService.awardPoints(userId, 10, 'REVIEW', 'Review submitted').catch(() => {});
 
     return this.reviewModel.findById(review._id).populate('userId', 'name avatar').lean().exec();
   }

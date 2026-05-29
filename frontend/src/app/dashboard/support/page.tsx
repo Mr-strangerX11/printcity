@@ -1,12 +1,11 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
-import { api } from '@/lib/api';
+import React, { useState } from 'react';
+import { supportApi } from '@/lib/api';
+import { useSupportTickets } from '@/hooks';
 import { formatDate } from '@/lib/utils';
-import { MessageSquare, Plus, Send, ChevronRight, AlertCircle } from 'lucide-react';
+import { MessageSquare, Plus, ChevronRight, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
-
-type Ticket = any;
 
 const STATUS_COLORS: Record<string, string> = {
   OPEN: 'bg-yellow-100 text-yellow-800',
@@ -23,30 +22,19 @@ const PRIORITY_COLORS: Record<string, string> = {
 };
 
 export default function SupportPage() {
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: tickets = [], loading, refetch } = useSupportTickets();
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ subject: '', description: '', priority: 'MEDIUM' });
   const [saving, setSaving] = useState(false);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { data } = await api.get('/support');
-      setTickets(data.data?.items ?? data.data ?? []);
-    } finally { setLoading(false); }
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
 
   const create = async () => {
     if (!form.subject.trim() || !form.description.trim()) return;
     setSaving(true);
     try {
-      await api.post('/support', form);
+      await supportApi.create({ subject: form.subject, description: form.description, priority: form.priority as any });
       setShowCreate(false);
       setForm({ subject: '', description: '', priority: 'MEDIUM' });
-      load();
+      refetch();
     } finally { setSaving(false); }
   };
 

@@ -4,7 +4,7 @@ import { CouponType } from '../../common/enums';
 
 export type CouponDocument = Coupon & Document;
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class Coupon {
   @Prop({ required: true, unique: true }) code: string;
   @Prop() description?: string;

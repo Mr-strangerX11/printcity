@@ -2,14 +2,13 @@
 
 export const dynamic = 'force-dynamic';
 
-import React, { Suspense, useState, useEffect, useCallback } from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Filter, X, ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { ProductCard } from '@/components/ui/ProductCard';
-import { productsApi, categoriesApi } from '@/lib/api';
-import { Product, Category } from '@/types';
+import { useProducts, useCategories } from '@/hooks';
 
 const SORT_OPTIONS = [
   { value: 'newest', label: 'Newest First' },
@@ -23,10 +22,6 @@ const PAGE_SIZE = 20;
 function ProductsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [priceMin, setPriceMin] = useState('');
   const [priceMax, setPriceMax] = useState('');
@@ -43,25 +38,17 @@ function ProductsContent() {
     setPriceMax(maxPrice);
   }, [minPrice, maxPrice]);
 
-  const fetchProducts = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { data } = await productsApi.list({
-        search, category, sort, page,
-        limit: PAGE_SIZE,
-        minPrice: minPrice || undefined,
-        maxPrice: maxPrice || undefined,
-      });
-      setProducts(data.data.items);
-      setTotal(data.data.meta.total);
-    } catch { setProducts([]); }
-    finally { setLoading(false); }
-  }, [search, category, sort, page, minPrice, maxPrice]);
+  const { data, loading } = useProducts({
+    search, category, sort, page,
+    limit: PAGE_SIZE,
+    minPrice: minPrice || undefined,
+    maxPrice: maxPrice || undefined,
+  });
 
-  useEffect(() => { fetchProducts(); }, [fetchProducts]);
-  useEffect(() => {
-    categoriesApi.list().then(({ data }) => setCategories(data.data ?? []));
-  }, []);
+  const { data: categories } = useCategories();
+
+  const products = data?.items ?? [];
+  const total = data?.meta.total ?? 0;
 
   const updateParam = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -87,7 +74,6 @@ function ProductsContent() {
   const totalPages = Math.ceil(total / PAGE_SIZE);
   const hasActiveFilters = !!(category || search || minPrice || maxPrice);
 
-  // Active filter chips
   const activeChips: { label: string; key: string; value: string }[] = [];
   if (category) activeChips.push({ label: category.replace(/-/g, ' '), key: 'category', value: '' });
   if (search) activeChips.push({ label: `"${search}"`, key: 'search', value: '' });
@@ -173,7 +159,7 @@ function ProductsContent() {
                   >
                     All Categories
                   </button>
-                  {categories.map((cat) => (
+                  {(categories ?? []).map((cat) => (
                     <button
                       key={cat.id}
                       onClick={() => updateParam('category', cat.slug)}

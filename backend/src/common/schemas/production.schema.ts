@@ -19,7 +19,7 @@ export enum PrintJobStatus {
   FAILED = 'FAILED',
 }
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class Payout extends Document {
   @Prop({ required: true })
   vendorId: string;
@@ -48,7 +48,7 @@ export class Payout extends Document {
 
 export const PayoutSchema = SchemaFactory.createForClass(Payout);
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class PrintJob extends Document {
   @Prop({ required: true })
   orderId: string;
@@ -77,7 +77,7 @@ export class PrintJob extends Document {
 
 export const PrintJobSchema = SchemaFactory.createForClass(PrintJob);
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class QualityCheck extends Document {
   @Prop({ required: true })
   printJobId: string;
@@ -100,7 +100,7 @@ export class QualityCheck extends Document {
 
 export const QualityCheckSchema = SchemaFactory.createForClass(QualityCheck);
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class Shipment extends Document {
   @Prop({ required: true })
   orderId: string;
@@ -129,7 +129,7 @@ export class Shipment extends Document {
 
 export const ShipmentSchema = SchemaFactory.createForClass(Shipment);
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class CustomDesignOrder extends Document {
   @Prop({ required: true })
   userId: string;
@@ -158,7 +158,7 @@ export class CustomDesignOrder extends Document {
 
 export const CustomDesignOrderSchema = SchemaFactory.createForClass(CustomDesignOrder);
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class DesignPrintJob extends Document {
   @Prop({ required: true })
   designId: string;
@@ -175,7 +175,7 @@ export class DesignPrintJob extends Document {
 
 export const DesignPrintJobSchema = SchemaFactory.createForClass(DesignPrintJob);
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class OrderItem extends Document {
   @Prop({ required: true })
   orderId: string;
@@ -201,7 +201,7 @@ export class OrderItem extends Document {
 
 export const OrderItemSchema = SchemaFactory.createForClass(OrderItem);
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class InvoiceItem extends Document {
   @Prop({ required: true })
   invoiceId: string;
@@ -227,7 +227,7 @@ export class InvoiceItem extends Document {
 
 export const InvoiceItemSchema = SchemaFactory.createForClass(InvoiceItem);
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class CouponUsage extends Document {
   @Prop({ required: true })
   couponId: string;
@@ -247,7 +247,7 @@ export class CouponUsage extends Document {
 
 export const CouponUsageSchema = SchemaFactory.createForClass(CouponUsage);
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class ViewToken extends Document {
   @Prop({ required: true })
   designId: string;

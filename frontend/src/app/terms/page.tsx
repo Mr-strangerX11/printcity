@@ -8,7 +8,7 @@ export const metadata = { title: 'Terms of Service' };
 const sections = [
   {
     title: '1. Acceptance of Terms',
-    body: `By accessing or using AP Marketplace, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our platform. We reserve the right to update these terms at any time, with notice provided via email or site announcement.`,
+    body: `By accessing or using PrintCity Marketplace, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our platform. We reserve the right to update these terms at any time, with notice provided via email or site announcement.`,
   },
   {
     title: '2. User Accounts',
@@ -16,7 +16,7 @@ const sections = [
   },
   {
     title: '3. Vendor Responsibilities',
-    body: `Vendors are responsible for the accuracy of product listings, fulfilling orders in a timely manner, maintaining adequate stock levels, and complying with all applicable laws. Vendors must not list counterfeit, prohibited, or misleading products. AP Marketplace reserves the right to suspend or terminate vendor accounts for policy violations.`,
+    body: `Vendors are responsible for the accuracy of product listings, fulfilling orders in a timely manner, maintaining adequate stock levels, and complying with all applicable laws. Vendors must not list counterfeit, prohibited, or misleading products. PrintCity Marketplace reserves the right to suspend or terminate vendor accounts for policy violations.`,
   },
   {
     title: '4. Orders and Payments',
@@ -24,7 +24,7 @@ const sections = [
   },
   {
     title: '5. Intellectual Property',
-    body: `Vendors retain ownership of their original designs. By listing on AP Marketplace, vendors grant us a non-exclusive license to display, reproduce, and promote their products on our platform. Vendors must not infringe third-party intellectual property rights.`,
+    body: `Vendors retain ownership of their original designs. By listing on PrintCity Marketplace, vendors grant us a non-exclusive license to display, reproduce, and promote their products on our platform. Vendors must not infringe third-party intellectual property rights.`,
   },
   {
     title: '6. Prohibited Conduct',
@@ -32,7 +32,7 @@ const sections = [
   },
   {
     title: '7. Limitation of Liability',
-    body: `AP Marketplace acts as a marketplace connecting buyers and vendors. We are not responsible for the quality, safety, or legality of items listed by vendors. Our liability is limited to the amount paid for the specific transaction giving rise to the claim.`,
+    body: `PrintCity Marketplace acts as a marketplace connecting buyers and vendors. We are not responsible for the quality, safety, or legality of items listed by vendors. Our liability is limited to the amount paid for the specific transaction giving rise to the claim.`,
   },
   {
     title: '8. Governing Law',

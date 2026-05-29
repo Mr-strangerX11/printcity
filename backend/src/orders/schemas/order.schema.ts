@@ -4,7 +4,7 @@ import { OrderStatus, PaymentStatus } from '../../common/enums';
 
 export type OrderDocument = Order & Document;
 
-@Schema({ timestamps: true })
+@Schema({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class Order {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true }) userId: Types.ObjectId;
   @Prop({ required: true }) totalAmount: number;
@@ -24,3 +24,8 @@ export class Order {
 }
 
 export const OrderSchema = SchemaFactory.createForClass(Order);
+
+// Compound indexes for common query patterns
+OrderSchema.index({ userId: 1, createdAt: -1 });
+OrderSchema.index({ orderStatus: 1, paymentStatus: 1 });
+OrderSchema.index({ createdAt: -1 });

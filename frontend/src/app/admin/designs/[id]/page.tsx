@@ -49,7 +49,7 @@ export default function AdminDesignDetailPage() {
   useEffect(() => {
     fetch(`${API}/api/designs?limit=1`, { credentials: 'include' })
       .then(r => r.json())
-      .then(data => {
+      .then(_data => {
         // Fetch individual design from the list (or add a GET /designs/:id endpoint)
         fetch(`${API}/api/designs?limit=100`, { credentials: 'include' })
           .then(r => r.json())

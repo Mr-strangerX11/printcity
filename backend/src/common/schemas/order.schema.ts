@@ -12,7 +12,7 @@ export enum OrderStatus {
   RETURNED = 'RETURNED',
 }
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class Order extends Document {
   @Prop({ required: true })
   userId: string;

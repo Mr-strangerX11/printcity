@@ -30,8 +30,8 @@ export default function LoginPage() {
   const onSubmit = async (data: FormData) => {
     try {
       const res = await authApi.login(data);
-      const { accessToken, refreshToken, role } = res.data.data;
-      await login(accessToken, refreshToken);
+      const { role } = res.data.data;
+      await login();
       toast.success('Welcome back!');
       if (role === 'ADMIN') router.push('/admin');
       else if (role === 'VENDOR') router.push('/vendor/dashboard');
@@ -49,10 +49,10 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-brand-gradient flex items-center justify-center text-white font-bold">AP</div>
+            <div className="w-10 h-10 rounded-xl bg-brand-gradient flex items-center justify-center text-white font-bold">PC</div>
           </Link>
           <h1 className="text-3xl font-black" style={{ color: 'var(--text-heading)' }}>Welcome back</h1>
-          <p className="mt-2" style={{ color: 'var(--text-muted)' }}>Sign in to your AP account</p>
+          <p className="mt-2" style={{ color: 'var(--text-muted)' }}>Sign in to your PrintCity account</p>
         </div>
 
         <div className="rounded-3xl p-8 shadow-sm" style={{ background: 'var(--surface)', border: '1px solid var(--border-color)' }}>
@@ -60,9 +60,9 @@ export default function LoginPage() {
           <div className="mb-6 p-4 bg-blue-50 rounded-2xl border border-blue-100">
             <p className="text-xs font-semibold text-blue-700 mb-2">Demo Accounts</p>
             <div className="space-y-1 text-xs text-blue-600">
-              <p>Admin: admin@ap.com / Admin@123</p>
-              <p>Vendor: vendor1@ap.com / Vendor@123</p>
-              <p>Customer: customer@ap.com / Customer@123</p>
+              <p>Admin: admin@PrintCity.com / Admin@123</p>
+              <p>Vendor: vendor1@PrintCity.com / Vendor@123</p>
+              <p>Customer: customer@PrintCity.com / Customer@123</p>
             </div>
           </div>
 

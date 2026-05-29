@@ -4,7 +4,7 @@ import { DesignPrintFormat, DesignColorMode, DesignPrintStatus } from '../../com
 
 export type DesignPrintJobDocument = DesignPrintJob & Document;
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class DesignPrintJob {
   @Prop({ type: Types.ObjectId, ref: 'Design', required: true }) designId: Types.ObjectId;
   @Prop({ type: Types.ObjectId, ref: 'User', required: true }) adminId: Types.ObjectId;

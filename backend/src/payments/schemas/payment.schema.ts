@@ -4,7 +4,7 @@ import { PaymentStatus } from '../../common/enums';
 
 export type PaymentDocument = Payment & Document;
 
-@Schema({ timestamps: true })
+@Schema({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class Payment {
   @Prop({ type: Types.ObjectId, ref: 'Order', required: true, unique: true }) orderId: Types.ObjectId;
   @Prop({ required: true }) provider: string;
@@ -17,3 +17,8 @@ export class Payment {
 }
 
 export const PaymentSchema = SchemaFactory.createForClass(Payment);
+
+// Indexes for Stripe/eSewa/Khalti webhook lookups (queried on every payment callback)
+PaymentSchema.index({ externalId: 1, provider: 1 });
+PaymentSchema.index({ provider: 1, status: 1 });
+PaymentSchema.index({ createdAt: -1 });

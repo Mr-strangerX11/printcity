@@ -71,12 +71,12 @@ const FAQS = [
     category: 'Vendors & Selling',
     items: [
       {
-        q: 'How do I become a vendor on AP?',
+        q: 'How do I become a vendor on PrintCity?',
         a: 'Sign up as a Vendor during registration. Once your account is approved by our admin team, you can upload designs, set prices, and start selling. Approval typically takes 24–48 hours.',
       },
       {
-        q: 'What commission does AP take?',
-        a: 'AP takes a platform commission (default 15%) on each sale. The remainder goes to you as the vendor. Your commission rate may be adjusted by the admin team based on your sales volume.',
+        q: 'What commission does PrintCity take?',
+        a: 'PrintCity takes a platform commission (default 15%) on each sale. The remainder goes to you as the vendor. Your commission rate may be adjusted by the admin team based on your sales volume.',
       },
       {
         q: 'When do I get paid as a vendor?',
@@ -84,7 +84,7 @@ const FAQS = [
       },
       {
         q: 'Can I sell custom design orders?',
-        a: 'Custom design orders submitted by customers are managed by AP admins centrally. As a vendor, you earn from your listed designs being purchased by customers through the marketplace.',
+        a: 'Custom design orders submitted by customers are managed by PrintCity admins centrally. As a vendor, you earn from your listed designs being purchased by customers through the marketplace.',
       },
     ],
   },
@@ -127,7 +127,7 @@ export default function FAQPage() {
               <HelpCircle className="w-7 h-7 text-white" />
             </div>
             <h1 className="text-3xl md:text-4xl font-black text-white mb-3">Frequently Asked Questions</h1>
-            <p className="text-gray-300 text-sm">Everything you need to know about ordering, printing, and selling on AP.</p>
+            <p className="text-gray-300 text-sm">Everything you need to know about ordering, printing, and selling on PrintCity.</p>
           </div>
         </section>
 

@@ -31,7 +31,7 @@ export default function ContactPage() {
       await new Promise(res => setTimeout(res, 1200));
       setSent(true);
     } catch {
-      setError('Something went wrong. Please email us directly at support@ap.com');
+      setError('Something went wrong. Please email us directly at support@PrintCity.com');
     } finally {
       setSending(false);
     }
@@ -61,7 +61,7 @@ export default function ContactPage() {
               <h2 className="font-black text-gray-900 text-lg">Get in Touch</h2>
 
               {[
-                { icon: <Mail className="w-5 h-5 text-blue-600" />, bg: 'bg-blue-50', label: 'Email', value: 'support@ap.com', href: 'mailto:support@ap.com' },
+                { icon: <Mail className="w-5 h-5 text-blue-600" />, bg: 'bg-blue-50', label: 'Email', value: 'support@PrintCity.com', href: 'mailto:support@PrintCity.com' },
                 { icon: <Phone className="w-5 h-5 text-green-600" />, bg: 'bg-green-50', label: 'Phone', value: '+977 98XXXXXXXX', href: 'tel:+97798XXXXXXXX' },
                 { icon: <MapPin className="w-5 h-5 text-purple-600" />, bg: 'bg-purple-50', label: 'Location', value: 'Kathmandu, Nepal', href: null },
                 { icon: <Clock className="w-5 h-5 text-orange-600" />, bg: 'bg-orange-50', label: 'Hours', value: 'Sun–Fri, 9am–6pm NPT', href: null },

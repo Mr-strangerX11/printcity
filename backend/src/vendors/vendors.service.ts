@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Vendor, VendorDocument } from './schemas/vendor.schema';
@@ -15,7 +15,7 @@ export class VendorsService {
 
   async findAll(query: any): Promise<any> {
     const page = Number(query.page) || 1;
-    const limit = 20;
+    const limit = Math.min(Number(query.limit) || 20, 100);
     const skip = (page - 1) * limit;
     const filter: any = {};
     if (query.status) filter.status = query.status;
@@ -93,12 +93,22 @@ export class VendorsService {
   }
 
   async createVendor(userId: string, storeName: string) {
-    const storeSlug = slugify(storeName, { lower: true, strict: true });
-    return this.vendorModel.create({
-      userId: new Types.ObjectId(userId),
-      storeName,
-      storeSlug,
-      status: VendorStatus.ACTIVE,
-    });
+    let storeSlug = slugify(storeName, { lower: true, strict: true });
+    // Ensure slug uniqueness with a numeric suffix when there's a collision
+    const exists = await this.vendorModel.findOne({ storeSlug }).lean().exec();
+    if (exists) {
+      storeSlug = `${storeSlug}-${Date.now().toString(36)}`;
+    }
+    try {
+      return await this.vendorModel.create({
+        userId: new Types.ObjectId(userId),
+        storeName,
+        storeSlug,
+        status: VendorStatus.ACTIVE,
+      });
+    } catch (err: any) {
+      if (err?.code === 11000) throw new ConflictException('A store with a similar name already exists.');
+      throw err;
+    }
   }
 }

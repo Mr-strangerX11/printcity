@@ -1,3 +1,4 @@
+import './instrument';
 import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import { NestExpressApplication } from '@nestjs/platform-express';
@@ -6,6 +7,8 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { AppLambdaModule } from './app-lambda.module';
 import express from 'express';
+import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 
 let cachedApp: NestExpressApplication | null = null;
 
@@ -27,9 +30,27 @@ export async function createNestApp(AppModuleClass = ActiveModule): Promise<Nest
     rawBody: true,
   });
 
+  app.use(cookieParser());
   app.setGlobalPrefix('api');
 
   const isDev = process.env.NODE_ENV !== 'production';
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        // Swagger UI needs inline scripts and CDN assets
+        scriptSrc: ["'self'", "'unsafe-inline'", 'cdn.jsdelivr.net', 'unpkg.com'],
+        styleSrc: ["'self'", "'unsafe-inline'", 'cdn.jsdelivr.net', 'unpkg.com', 'fonts.googleapis.com'],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        fontSrc: ["'self'", 'fonts.gstatic.com', 'data:'],
+        connectSrc: ["'self'"],
+        frameSrc: ["'none'"],
+        objectSrc: ["'none'"],
+        upgradeInsecureRequests: isDev ? null : [],
+      },
+    },
+    crossOriginEmbedderPolicy: false, // Swagger UI cross-origin assets
+  }));
 
   app.enableCors({
     origin: isDev
@@ -58,8 +79,8 @@ export async function createNestApp(AppModuleClass = ActiveModule): Promise<Nest
   );
 
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('AP API')
-    .setDescription('AP — Custom Print Marketplace API')
+    .setTitle('PrintCity API')
+    .setDescription('PrintCity — Custom Print Marketplace API')
     .setVersion('1.0')
     .addBearerAuth()
     .build();

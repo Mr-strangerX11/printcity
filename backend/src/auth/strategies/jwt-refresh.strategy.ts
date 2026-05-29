@@ -8,14 +8,16 @@ import { Request } from 'express';
 export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh') {
   constructor(config: ConfigService) {
     super({
-      jwtFromRequest: ExtractJwt.fromBodyField('refreshToken'),
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        (req: Request) => req?.cookies?.refreshToken ?? null,
+      ]),
       secretOrKey: config.get<string>('JWT_REFRESH_SECRET'),
       passReqToCallback: true,
     });
   }
 
   validate(req: Request, payload: { sub: string; email: string }) {
-    const refreshToken = req.body?.refreshToken;
+    const refreshToken = req?.cookies?.refreshToken;
     if (!refreshToken) throw new UnauthorizedException('Refresh token missing');
     return { ...payload, refreshToken };
   }

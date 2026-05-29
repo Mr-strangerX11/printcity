@@ -7,6 +7,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AuditLog, AuditLogSchema } from './common/schemas/audit-log.schema';
 import { MailModule } from './mail/mail.module';
+import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { ProductsModule } from './products/products.module';
 import { CategoriesModule } from './categories/categories.module';
@@ -29,6 +30,9 @@ import { QueuesModule } from './queues/queues.module';
 import { DesignsModule } from './designs/designs.module';
 import { PrintSecureModule } from './print-secure/print-secure.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
+import { AnalyticsModule } from './analytics/analytics.module';
+import { LoyaltyModule } from './loyalty/loyalty.module';
+import { ReferralModule } from './referral/referral.module';
 
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -43,6 +47,7 @@ import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor
     MongooseModule.forRoot(process.env.DATABASE_URL as string),
     MongooseModule.forFeature([{ name: AuditLog.name, schema: AuditLogSchema }]),
     MailModule,
+    HealthModule,
     AuthModule,
     ProductsModule,
     CategoriesModule,
@@ -66,6 +71,9 @@ import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor
     UserModule,
     DesignsModule,
     PrintSecureModule,
+    AnalyticsModule,
+    LoyaltyModule,
+    ReferralModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

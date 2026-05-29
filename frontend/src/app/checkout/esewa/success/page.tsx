@@ -19,7 +19,7 @@ function EsewaSuccessContent() {
       return;
     }
 
-    fetch(`${API}/api/payments/esewa/verify?data=${encodeURIComponent(data)}`, {
+    fetch(`${API}/payments/esewa/verify?data=${encodeURIComponent(data)}`, {
       credentials: 'include',
     })
       .then(async (res) => {

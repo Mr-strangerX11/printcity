@@ -1,22 +1,88 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
+import { MailValidator } from './mail.validation';
+
+const PLACEHOLDER = 'your_smtp_user';
 
 @Injectable()
-export class MailService {
+export class MailService implements OnModuleInit {
   private transporter: nodemailer.Transporter;
   private readonly logger = new Logger(MailService.name);
+  private isEthereal = false;
+  private smtpConfigured = false;
+  private lastError: string | null = null;
 
-  constructor(private config: ConfigService) {
-    this.transporter = nodemailer.createTransport({
-      host: this.config.get('SMTP_HOST'),
-      port: Number(this.config.get('SMTP_PORT', 587)),
-      secure: false,
-      auth: {
-        user: this.config.get('SMTP_USER'),
-        pass: this.config.get('SMTP_PASS'),
-      },
-    });
+  constructor(private config: ConfigService) {}
+
+  async onModuleInit() {
+    const smtpUser = this.config.get<string>('SMTP_USER') ?? '';
+    const isPlaceholder = !smtpUser || smtpUser === PLACEHOLDER;
+
+    if (isPlaceholder) {
+      // No real SMTP configured — spin up a free Ethereal test account
+      this.logger.warn('⚠️  SMTP credentials not configured (SMTP_USER is empty or placeholder)');
+      this.logger.warn('🧪 Using Ethereal test account for testing only. Emails will NOT be delivered to real inboxes.');
+      const testAccount = await nodemailer.createTestAccount();
+      this.transporter = nodemailer.createTransport({
+        host: 'smtp.ethereal.email',
+        port: 587,
+        secure: false,
+        auth: { user: testAccount.user, pass: testAccount.pass },
+      });
+      this.isEthereal = true;
+      this.smtpConfigured = false;
+      this.logger.log(`📧 Ethereal test inbox: https://ethereal.email/messages (user: ${testAccount.user})`);
+      this.logger.log(`📧 All test emails will appear here. Check this link to verify emails are being sent.`);
+    } else {
+      const host = this.config.get('SMTP_HOST');
+      const port = Number(this.config.get('SMTP_PORT') || 587);
+      
+      this.logger.log(`📧 SMTP Configuration:`);
+      this.logger.log(`   Host: ${host}:${port}`);
+      this.logger.log(`   User: ${smtpUser}`);
+      this.logger.log(`   Secure: ${port === 465 ? 'Yes (TLS)' : 'No (STARTTLS)'}`);
+      
+      this.transporter = nodemailer.createTransport({
+        host,
+        port,
+        secure: port === 465,
+        auth: { user: smtpUser, pass: this.config.get('SMTP_PASS') },
+        tls: { rejectUnauthorized: this.config.get('NODE_ENV') === 'production' },
+      });
+      
+      this.smtpConfigured = true;
+      this.transporter.verify()
+        .then(() => {
+          this.logger.log('✅ SMTP connection verified — ready to send emails');
+          this.lastError = null;
+        })
+        .catch((err) => {
+          this.lastError = err?.message;
+          this.logger.error(`❌ SMTP connection FAILED: ${err?.message ?? err}`);
+          this.logger.error(`   Check your SMTP credentials in .env:`);
+          this.logger.error(`   - SMTP_HOST: ${host}`);
+          this.logger.error(`   - SMTP_PORT: ${port}`);
+          this.logger.error(`   - SMTP_USER: ${smtpUser}`);
+          this.logger.error(`   Error code: ${err?.code || 'N/A'}`);
+        });
+    }
+  }
+
+  /**
+   * Get current mail service status (for diagnostics)
+   */
+  getStatus() {
+    return {
+      mode: this.isEthereal ? 'Ethereal (Test)' : 'SMTP (Production)',
+      configured: this.smtpConfigured,
+      lastError: this.lastError,
+      etherealTestUrl: this.isEthereal ? 'https://ethereal.email/messages' : null,
+      smtpHost: this.config.get('SMTP_HOST', 'Not configured'),
+      smtpPort: this.config.get('SMTP_PORT', '587'),
+      smtpUser: this.config.get('SMTP_USER') ? '[SET]' : '[NOT SET]',
+      smtpFrom: this.config.get('SMTP_FROM', 'noreply@printcity.com'),
+    };
   }
 
   async sendOrderConfirmation(to: string, orderId: string, total: number) {
@@ -390,7 +456,7 @@ export class MailService {
         <p style="font-size:11px;color:#9CA3AF;margin:0;">© ${new Date().getFullYear()} Print City · Kathmandu, Nepal</p>
       </div>
     </div>`;
-    await this.send(to, 'Your Print City verification code', html);
+    await this.sendCritical(to, 'Your Print City verification code', html);
   }
 
   async sendWishlistPriceAlert(to: string, name: string, items: { title: string; oldPrice: number; newPrice: number; slug: string }[]) {
@@ -462,16 +528,86 @@ export class MailService {
     await this.send(to, 'You left items in your cart — Print City', html);
   }
 
+  // Non-critical send — logs errors but never throws (order emails etc.)
   private async send(to: string, subject: string, html: string) {
     try {
-      await this.transporter.sendMail({
-        from: this.config.get('SMTP_FROM', 'noreply@printcity.com.np'),
+      await this.sendMail(to, subject, html);
+    } catch (err: any) {
+      const errorMsg = err?.message || err?.toString() || 'Unknown error';
+      const errorDetails = err?.response?.toString() || '';
+      this.logger.error(
+        `❌ FAILED to send email to ${to}: ${errorMsg}${errorDetails ? ` | Response: ${errorDetails}` : ''}`,
+        { to, subject, code: err?.code, response: err?.response }
+      );
+      // Non-critical — don't throw, but email has failed
+      return false;
+    }
+    return true;
+  }
+
+  // Critical send — throws so the caller can return a proper error to the user
+  private async sendCritical(to: string, subject: string, html: string) {
+    try {
+      await this.sendMail(to, subject, html);
+    } catch (err: any) {
+      const errorMsg = err?.message || err?.toString() || 'Unknown error';
+      const errorDetails = err?.response?.toString() || '';
+      this.logger.error(
+        `❌ CRITICAL EMAIL FAILURE to ${to}: ${errorMsg}${errorDetails ? ` | Response: ${errorDetails}` : ''}`,
+        { to, subject, code: err?.code, response: err?.response }
+      );
+      throw err;
+    }
+  }
+
+  private async sendMail(to: string, subject: string, html: string) {
+    const from = this.config.get('SMTP_FROM', 'noreply@printcity.com.np');
+    
+    // Validate email address before sending
+    if (!MailValidator.isValidEmail(to)) {
+      const error = `Invalid recipient email address: "${to}"`;
+      this.logger.error(`❌ ${error}`);
+      throw new Error(error);
+    }
+
+    if (!MailValidator.isValidEmail(from)) {
+      const error = `Invalid sender email address: "${from}"`;
+      this.logger.error(`❌ ${error}`);
+      this.lastError = error;
+      throw new Error(error);
+    }
+    
+    this.logger.debug(`📬 Attempting to send email: "${subject}" → ${to} (from: ${from})`);
+    
+    try {
+      const info = await this.transporter.sendMail({
+        from,
         to,
         subject,
         html,
       });
-    } catch (err) {
-      this.logger.error(`Failed to send email to ${to}: ${err}`);
+      
+      this.lastError = null; // Clear error on success
+      
+      if (this.isEthereal) {
+        const previewUrl = nodemailer.getTestMessageUrl(info);
+        this.logger.log(`✅ Email queued (Ethereal test) → Preview: ${previewUrl}`);
+      } else {
+        this.logger.log(`✅ Email sent successfully to ${to} (MessageID: ${info.messageId})`);
+      }
+      
+      return info;
+    } catch (err: any) {
+      const errorMsg = err?.message || err?.toString() || 'Unknown error';
+      this.lastError = errorMsg;
+      
+      // Log with detailed error information
+      this.logger.error(`❌ Email delivery failed for "${subject}" → ${to}`);
+      this.logger.error(`   Error: ${errorMsg}`);
+      if (err?.code) this.logger.error(`   Code: ${err.code}`);
+      if (err?.response) this.logger.error(`   Response: ${err.response}`);
+      
+      throw err;
     }
   }
 }

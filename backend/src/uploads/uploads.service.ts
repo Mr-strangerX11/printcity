@@ -1,4 +1,4 @@
-import { Injectable, BadGatewayException } from '@nestjs/common';
+import { Injectable, BadGatewayException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
 import { Readable } from 'stream';
@@ -40,7 +40,42 @@ export class UploadsService {
     } as unknown as UploadApiResponse;
   }
 
-  async uploadFile(file: Express.Multer.File, folder = 'ap'): Promise<UploadApiResponse> {
+  // Magic-byte signatures for each allowed type — Content-Type header is attacker-controlled,
+  // so we verify the actual file bytes before accepting the upload.
+  private static readonly MAGIC_BYTES: Array<{ type: string; bytes: number[]; offset?: number }> = [
+    { type: 'image/jpeg', bytes: [0xff, 0xd8, 0xff] },
+    { type: 'image/png',  bytes: [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] },
+    { type: 'image/webp', bytes: [0x52, 0x49, 0x46, 0x46], offset: 0 }, // RIFF header (also check offset 8 for WEBP)
+    { type: 'image/gif',  bytes: [0x47, 0x49, 0x46, 0x38] }, // GIF8
+    { type: 'application/pdf', bytes: [0x25, 0x50, 0x44, 0x46] }, // %PDF
+  ];
+
+  private validateMagicBytes(file: Express.Multer.File): void {
+    const buf = file.buffer;
+    if (!buf || buf.length < 8) {
+      throw new BadRequestException('File is empty or too small to validate');
+    }
+
+    const matched = UploadsService.MAGIC_BYTES.some(sig => {
+      const offset = sig.offset ?? 0;
+      return sig.bytes.every((byte, i) => buf[offset + i] === byte);
+    });
+
+    // WebP special case: "RIFF....WEBP" at bytes 0 and 8
+    const isWebp = buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46
+      && buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50;
+
+    if (!matched && !isWebp) {
+      throw new BadRequestException(
+        'File content does not match an allowed type (JPEG, PNG, WebP, GIF, PDF)',
+      );
+    }
+  }
+
+  async uploadFile(file: Express.Multer.File, folder = 'PrintCity'): Promise<UploadApiResponse> {
+    // Validate actual file bytes — Content-Type header is not trusted
+    this.validateMagicBytes(file);
+
     if (!this.isCloudinaryConfigured()) {
       return this.uploadFileLocally(file, folder);
     }
@@ -62,7 +97,7 @@ export class UploadsService {
     return cloudinary.uploader.destroy(publicId);
   }
 
-  generateSignature(folder = 'ap') {
+  generateSignature(folder = 'PrintCity') {
     const timestamp = Math.round(new Date().getTime() / 1000);
     const params = `folder=${folder}&timestamp=${timestamp}`;
     const signature = cloudinary.utils.api_sign_request(

@@ -4,7 +4,7 @@ import { DesignStatus } from '../../common/enums';
 
 export type DesignDocument = Design & Document;
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class Design {
   @Prop({ required: true }) title: string;
   @Prop() description?: string;

@@ -3,7 +3,7 @@ import { Document, Types } from 'mongoose';
 
 export type InvoiceItemDocument = InvoiceItem & Document;
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class InvoiceItem {
   @Prop({ type: Types.ObjectId, ref: 'Invoice', required: true }) invoiceId: Types.ObjectId;
   @Prop({ type: Types.ObjectId, ref: 'Product', required: true }) productId: Types.ObjectId;

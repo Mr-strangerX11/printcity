@@ -1,26 +1,16 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { DollarSign, TrendingUp, Clock, CheckCircle } from 'lucide-react';
-import { payoutsApi } from '@/lib/api';
-import { Payout } from '@/types';
+import { usePayouts, usePayoutEarnings } from '@/hooks';
 import { formatPrice, formatDate } from '@/lib/utils';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 
 export default function EarningsPage() {
-  const [earnings, setEarnings] = useState<any>(null);
-  const [payouts, setPayouts] = useState<Payout[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    Promise.all([
-      payoutsApi.earnings(),
-      payoutsApi.list(),
-    ]).then(([earn, pay]) => {
-      setEarnings(earn.data.data);
-      setPayouts(pay.data.data.items ?? []);
-    }).finally(() => setLoading(false));
-  }, []);
+  const { data: earnings, loading: l1 } = usePayoutEarnings();
+  const { data: payoutsData, loading: l2 } = usePayouts();
+  const payouts = payoutsData?.items ?? [];
+  const loading = l1 || l2;
 
   if (loading) return <div className="space-y-4">{[1,2,3].map(i => <div key={i} className="h-24 bg-gray-100 rounded-2xl animate-pulse" />)}</div>;
 

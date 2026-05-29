@@ -8,16 +8,8 @@ import { Footer } from '@/components/layout/Footer';
 import { ordersApi } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { formatDate, ORDER_STATUS_COLORS, ORDER_TIMELINE } from '@/lib/utils';
-import { Search, Package, Truck, CheckCircle, Clock, MapPin, Loader2, ArrowRight } from 'lucide-react';
+import { Search, Package, Truck, MapPin, Loader2, ArrowRight } from 'lucide-react';
 
-const STATUS_ICON: Record<string, React.ReactNode> = {
-  PENDING: <Clock className="w-5 h-5 text-yellow-500" />,
-  CONFIRMED: <CheckCircle className="w-5 h-5 text-blue-500" />,
-  PRINTING: <Package className="w-5 h-5 text-purple-500" />,
-  PACKED: <Package className="w-5 h-5 text-indigo-500" />,
-  SHIPPED: <Truck className="w-5 h-5 text-cyan-500" />,
-  DELIVERED: <CheckCircle className="w-5 h-5 text-green-500" />,
-};
 
 export default function TrackOrderPage() {
   const { user } = useAuth();

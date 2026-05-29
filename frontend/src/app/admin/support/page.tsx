@@ -1,15 +1,14 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
-import { api } from '@/lib/api';
+import React, { useState } from 'react';
+import { supportApi } from '@/lib/api';
+import { useSupportTickets, useSupportStats } from '@/hooks';
 import { formatDate } from '@/lib/utils';
-import { MessageSquare, RefreshCw, ChevronDown, Send, AlertCircle, Clock, CheckCircle2 } from 'lucide-react';
+import { MessageSquare, RefreshCw, Send, AlertCircle, Clock, CheckCircle2 } from 'lucide-react';
 
 type Ticket = any;
 
 const STATUSES = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
-const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
-
 const STATUS_COLORS: Record<string, string> = {
   OPEN: 'bg-yellow-100 text-yellow-800',
   IN_PROGRESS: 'bg-blue-100 text-blue-800',
@@ -24,30 +23,15 @@ const PRIORITY_COLORS: Record<string, string> = {
 };
 
 export default function SupportPage() {
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [stats, setStats] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
+  const { data: tickets = [], loading, refetch } = useSupportTickets({ status: statusFilter || undefined });
+  const { data: stats } = useSupportStats();
   const [selected, setSelected] = useState<Ticket | null>(null);
   const [reply, setReply] = useState('');
   const [sending, setSending] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [t, s] = await Promise.all([
-        api.get('/support', { params: { status: statusFilter || undefined } }),
-        api.get('/support/stats'),
-      ]);
-      setTickets(t.data.data?.items ?? []);
-      setStats(s.data.data);
-    } finally { setLoading(false); }
-  }, [statusFilter]);
-
-  useEffect(() => { load(); }, [load]);
-
   const openTicket = async (t: Ticket) => {
-    const { data } = await api.get(`/support/${t.id}`);
+    const { data } = await supportApi.get(t.id);
     setSelected(data.data ?? t);
     setReply('');
   };
@@ -56,21 +40,21 @@ export default function SupportPage() {
     if (!reply.trim() || !selected) return;
     setSending(true);
     try {
-      await api.post(`/support/${selected.id}/reply`, { message: reply });
-      const { data } = await api.get(`/support/${selected.id}`);
+      await supportApi.reply(selected.id, reply);
+      const { data } = await supportApi.get(selected.id);
       setSelected(data.data);
       setReply('');
-      load();
+      refetch();
     } finally { setSending(false); }
   };
 
   const updateStatus = async (id: string, status: string) => {
-    await api.patch(`/support/${id}/status`, { status });
+    await supportApi.updateStatus(id, status);
     if (selected?.id === id) {
-      const { data } = await api.get(`/support/${id}`);
+      const { data } = await supportApi.get(id);
       setSelected(data.data);
     }
-    load();
+    refetch();
   };
 
   return (
@@ -80,7 +64,7 @@ export default function SupportPage() {
           <h1 className="text-2xl font-black text-gray-900">Support Tickets</h1>
           <p className="text-sm text-gray-500 mt-0.5">{tickets.length} tickets</p>
         </div>
-        <button onClick={load} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 border border-gray-200 rounded-xl px-3 py-2">
+        <button onClick={refetch} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 border border-gray-200 rounded-xl px-3 py-2">
           <RefreshCw className="w-4 h-4" />
         </button>
       </div>

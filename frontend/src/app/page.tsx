@@ -7,8 +7,14 @@ import {
   Check, TrendingUp, Zap, Award, Globe, BarChart3,
 } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
+import { CategoryBar } from '@/components/layout/CategoryBar';
 import { Footer } from '@/components/layout/Footer';
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
+import SocialProofCounter from '@/components/sections/SocialProofCounter';
+import LoyaltyRewardsSection from '@/components/sections/LoyaltyRewardsSection';
+import ComparisonTable from '@/components/sections/ComparisonTable';
+import VendorSuccessStories from '@/components/sections/VendorSuccessStories';
+import QuickFAQ from '@/components/sections/QuickFAQ';
 
 async function getHomeData() {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
@@ -74,7 +80,7 @@ const TESTIMONIALS = [
   {
     name: 'Anita Maharjan', role: 'Event Organizer', location: 'Bhaktapur',
     avatar: 'AM', rating: 5, color: 'from-cyan-500 to-teal-500',
-    text: 'Used AP for all our event merchandise. The custom design studio is so intuitive — I created professional-looking prints without any design background at all.',
+    text: 'Used PrintCity for all our event merchandise. The custom design studio is so intuitive — I created professional-looking prints without any design background at all.',
     order: 'Event Merch × 200', verified: true,
   },
 ];
@@ -159,6 +165,7 @@ export default async function HomePage() {
   return (
     <>
       <Navbar />
+      <CategoryBar />
 
       <main className="min-h-screen" style={{ background: 'var(--page-bg)' }}>
 
@@ -543,6 +550,9 @@ export default async function HomePage() {
           </div>
         </section>
 
+        {/* ━━━━ NEW: LOYALTY REWARDS ━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+        <LoyaltyRewardsSection />
+
         {/* ━━━━ 7. DESIGN STUDIO ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
         <section className="py-16 sm:py-20 relative overflow-hidden" style={{ background: 'var(--surface-alt)' }}>
           <div className="absolute inset-0 dot-grid opacity-25 pointer-events-none" />
@@ -560,7 +570,7 @@ export default async function HomePage() {
                     <div className="w-2.5 h-2.5 rounded-full" style={{ background: '#FFBD2E' }} />
                     <div className="w-2.5 h-2.5 rounded-full" style={{ background: '#28C840' }} />
                     <div className="ml-3 flex-1 h-5 rounded-md text-[11px] flex items-center px-3 font-mono"
-                      style={{ background: 'var(--input-bg)', color: 'var(--text-faint)' }}>ap.design/studio</div>
+                      style={{ background: 'var(--input-bg)', color: 'var(--text-faint)' }}>printcity.design/studio</div>
                   </div>
                   <div className="p-4 flex gap-3">
                     <div className="w-[72px] flex-shrink-0 space-y-1.5">
@@ -645,11 +655,11 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* ━━━━ 8. WHY CHOOSE AP ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+        {/* ━━━━ 8. WHY CHOOSE PRINTCITY ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
         <section className="py-16 sm:py-20" style={{ background: 'var(--page-bg)' }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6">
             <div className="text-center mb-10">
-              <span className="inline-block text-[11px] font-black text-cyan-500 dark:text-cyan-400 uppercase tracking-[0.28em] mb-4 px-3.5 py-1.5 bg-cyan-500/10 border border-cyan-500/20 rounded-full">Why AP?</span>
+              <span className="inline-block text-[11px] font-black text-cyan-500 dark:text-cyan-400 uppercase tracking-[0.28em] mb-4 px-3.5 py-1.5 bg-cyan-500/10 border border-cyan-500/20 rounded-full">Why PrintCity?</span>
               <h2 className="text-3xl sm:text-5xl font-black leading-tight mb-3" style={{ color: 'var(--text-heading)' }}>
                 Built for creators.<br />
                 <span className="shimmer-text">Trusted by thousands.</span>
@@ -675,62 +685,11 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* ━━━━ 9. STATS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-        <section className="py-16 sm:py-20 relative overflow-hidden" style={{ background: 'var(--surface-alt)' }}>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] rounded-full pointer-events-none blur-[60px]"
-            style={{ background: 'var(--orb-purple)' }} />
-          <div className="absolute top-0 left-0 right-0 h-px"
-            style={{ background: 'linear-gradient(90deg, transparent 5%, rgba(124,58,237,0.25) 40%, rgba(37,99,235,0.25) 60%, transparent 95%)' }} />
-          <div className="absolute bottom-0 left-0 right-0 h-px"
-            style={{ background: 'linear-gradient(90deg, transparent 5%, rgba(124,58,237,0.15) 40%, rgba(37,99,235,0.15) 60%, transparent 95%)' }} />
+        {/* ━━━━ NEW: COMPARISON TABLE ━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+        <ComparisonTable />
 
-          <div className="relative max-w-6xl mx-auto px-4 sm:px-6">
-            <div className="text-center mb-10 sm:mb-12">
-              <span className="inline-flex items-center gap-2 text-[11px] font-black text-violet-500 dark:text-violet-400 uppercase tracking-[0.28em] mb-5 px-3.5 py-1.5 bg-violet-500/10 border border-violet-500/20 rounded-full">
-                <span className="w-1.5 h-1.5 rounded-full bg-violet-500 dark:bg-violet-400 animate-pulse-dot" />
-                By the numbers
-              </span>
-              <h2 className="text-3xl sm:text-4xl md:text-[3.25rem] font-black leading-tight tracking-tight"
-                style={{ color: 'var(--text-heading)' }}>
-                Built for <span className="shimmer-text">creators</span> who mean business.
-              </h2>
-            </div>
-
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-              {[
-                { value: '10,000+', label: 'Products Listed',  sub: 'and growing daily',       gradient: 'from-violet-600 to-violet-800', glow: 'rgba(124,58,237,0.4)', lightGlow: 'rgba(124,58,237,0.08)', icon: <Package className="w-5 h-5 text-violet-300" /> },
-                { value: '500+',    label: 'Active Vendors',   sub: 'earning weekly payouts',   gradient: 'from-blue-600 to-blue-800',   glow: 'rgba(37,99,235,0.4)',  lightGlow: 'rgba(37,99,235,0.08)',  icon: <Users className="w-5 h-5 text-blue-300" /> },
-                { value: '25,000+', label: 'Orders Delivered', sub: 'shipped nationwide',       gradient: 'from-cyan-600 to-cyan-800',   glow: 'rgba(6,182,212,0.4)',  lightGlow: 'rgba(6,182,212,0.08)',  icon: <Truck className="w-5 h-5 text-cyan-300" /> },
-                { value: '98%',     label: 'Satisfaction Rate', sub: 'from verified buyers',   gradient: 'from-emerald-600 to-emerald-800', glow: 'rgba(16,185,129,0.4)', lightGlow: 'rgba(16,185,129,0.08)', icon: <Star className="w-5 h-5 text-emerald-300" /> },
-              ].map(({ value, label, sub, gradient, glow, lightGlow, icon }) => (
-                <div key={label}
-                  className="group relative rounded-2xl sm:rounded-3xl p-6 sm:p-8 overflow-hidden transition-all duration-300 hover:-translate-y-1"
-                  style={{
-                    background: `radial-gradient(ellipse 120% 80% at 10% 10%, ${lightGlow} 0%, var(--card-bg) 60%)`,
-                    border: '1px solid var(--border-color)',
-                  }}>
-
-                  <div className="absolute -top-10 -left-10 w-32 h-32 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-                    style={{ background: `radial-gradient(circle, ${glow} 0%, transparent 70%)`, filter: 'blur(20px)' }} />
-
-                  <div className={`inline-flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-gradient-to-br ${gradient} mb-5 sm:mb-6`}
-                    style={{ boxShadow: `0 8px 24px ${glow}` }}>
-                    {icon}
-                  </div>
-
-                  <p className="font-black leading-none mb-2 tracking-tight"
-                    style={{ fontSize: 'clamp(2rem,4.5vw,3.5rem)', color: 'var(--text-heading)' }}>
-                    {value}
-                  </p>
-                  <p className="text-sm sm:text-base font-bold mb-1" style={{ color: 'var(--text-body)' }}>{label}</p>
-                  <p className="text-xs font-medium" style={{ color: 'var(--text-faint)' }}>{sub}</p>
-
-                  <div className={`absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r ${gradient} opacity-40 group-hover:opacity-80 transition-opacity duration-300`} />
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
+        {/* ━━━━ 9. STATS (animated count-up) ━━━━━━━━━━━━━━━━━━━ */}
+        <SocialProofCounter />
 
         {/* ━━━━ 10. TOP VENDORS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
         {vendors.length > 0 && (
@@ -833,6 +792,12 @@ export default async function HomePage() {
           </div>
         </section>
 
+        {/* ━━━━ NEW: VENDOR SUCCESS STORIES ━━━━━━━━━━━━━━━━━━━ */}
+        <VendorSuccessStories />
+
+        {/* ━━━━ NEW: QUICK FAQ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+        <QuickFAQ />
+
         {/* ━━━━ 12. FINAL CTA ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
         <section className="relative overflow-hidden" style={{ background: 'var(--page-bg)' }}>
           <div className="absolute inset-0"
@@ -869,7 +834,7 @@ export default async function HomePage() {
                 Ready to create<br />something <span className="shimmer-text">amazing?</span>
               </h2>
               <p className="text-base max-w-md mx-auto mb-14" style={{ color: 'var(--text-muted)' }}>
-                Join thousands of designers and businesses who trust AP Marketplace for premium custom printing.
+                Join thousands of designers and businesses who trust PrintCity Marketplace for premium custom printing.
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 max-w-4xl mx-auto text-left">

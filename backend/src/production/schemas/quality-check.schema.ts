@@ -4,7 +4,7 @@ import { QCStatus } from '../../common/enums';
 
 export type QualityCheckDocument = QualityCheck & Document;
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class QualityCheck {
   @Prop({ type: Types.ObjectId, ref: 'PrintJob', required: true, unique: true }) printJobId: Types.ObjectId;
   @Prop({ type: Types.ObjectId, ref: 'User', default: null }) inspectedBy?: Types.ObjectId;

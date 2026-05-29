@@ -1,20 +1,15 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { Package } from 'lucide-react';
-import { ordersApi } from '@/lib/api';
-import { Order } from '@/types';
+import { useOrders } from '@/hooks';
 import { formatPrice, formatDate } from '@/lib/utils';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 
 export default function OrdersPage() {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    ordersApi.list({ limit: 50 }).then(({ data }) => setOrders(data.data.items)).finally(() => setLoading(false));
-  }, []);
+  const { data, loading } = useOrders({ limit: 50 });
+  const orders = data?.items ?? [];
 
   if (loading) return <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-20 bg-gray-100 rounded-2xl animate-pulse" />)}</div>;
 

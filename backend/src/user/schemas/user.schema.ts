@@ -9,7 +9,7 @@ export enum Role {
   CUSTOMER = 'CUSTOMER',
 }
 
-@Schema({ timestamps: true })
+@Schema({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class User {
   @Prop({ required: true })
   name: string;

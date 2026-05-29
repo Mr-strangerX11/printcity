@@ -104,14 +104,31 @@ export class CouponsService {
   async applyCoupon(couponCode: string, userId: string, orderId: string, orderAmount: number) {
     const { coupon, discountAmount } = await this.validate({ code: couponCode, orderAmount }, userId);
 
+    // Atomic check-and-increment: only succeeds if usageLimit not yet reached.
+    // This eliminates the race condition where two concurrent requests both pass validate()
+    // then both increment, exceeding the limit.
+    const atomicUpdate = await this.couponModel.findOneAndUpdate(
+      {
+        _id: coupon._id,
+        $or: [
+          { usageLimit: null },
+          { $expr: { $lt: ['$usageCount', '$usageLimit'] } },
+        ],
+      },
+      { $inc: { usageCount: 1 } },
+      { new: true },
+    ).exec();
+
+    if (!atomicUpdate) {
+      throw new BadRequestException('Coupon usage limit has just been reached. Please try another coupon.');
+    }
+
     await this.couponUsageModel.create({
       couponId: coupon._id,
       userId: new Types.ObjectId(userId),
       orderId: new Types.ObjectId(orderId),
       discount: discountAmount,
     });
-
-    await this.couponModel.findByIdAndUpdate(coupon._id, { $inc: { usageCount: 1 } });
 
     await this.orderModel.findByIdAndUpdate(orderId, {
       couponCode: coupon.code,

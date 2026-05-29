@@ -1,5 +1,4 @@
 import axios from 'axios';
-import Cookies from 'js-cookie';
 
 // In dev the Next.js rewrite proxy forwards /api → localhost:4000/api.
 // In production rewrites are disabled, so use the absolute backend URL directly.
@@ -10,18 +9,14 @@ const API_URL =
 
 export const api = axios.create({
   baseURL: API_URL,
-  withCredentials: true,
+  withCredentials: true, // sends httpOnly cookies automatically
   timeout: 15000,
 });
 
-api.interceptors.request.use((config) => {
-  const token = Cookies.get('accessToken');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+// No Authorization header injection — tokens live in httpOnly cookies only.
 
 let isRefreshing = false;
-let refreshQueue: Array<(token: string) => void> = [];
+let refreshQueue: Array<{ resolve: () => void; reject: (err: any) => void }> = [];
 
 api.interceptors.response.use(
   (res) => res,
@@ -29,28 +24,26 @@ api.interceptors.response.use(
     const original = error.config;
     if (error.response?.status === 401 && !original._retry) {
       if (isRefreshing) {
-        return new Promise((resolve) => {
-          refreshQueue.push((token) => {
-            original.headers.Authorization = `Bearer ${token}`;
-            resolve(api(original));
+        return new Promise((resolve, reject) => {
+          refreshQueue.push({
+            resolve: () => resolve(api(original)),
+            reject,
           });
         });
       }
       original._retry = true;
       isRefreshing = true;
       try {
-        const refreshToken = Cookies.get('refreshToken');
-        // Use the same `api` instance so it routes through the proxy
-        const { data } = await api.post('/auth/refresh', { refreshToken });
-        const { accessToken } = data.data;
-        Cookies.set('accessToken', accessToken, { expires: 1 });
-        refreshQueue.forEach((cb) => cb(accessToken));
+        // Refresh token is sent automatically via httpOnly cookie (withCredentials)
+        await api.post('/auth/refresh');
+        refreshQueue.forEach(({ resolve }) => resolve());
         refreshQueue = [];
-        original.headers.Authorization = `Bearer ${accessToken}`;
         return api(original);
-      } catch {
-        Cookies.remove('accessToken');
-        Cookies.remove('refreshToken');
+      } catch (refreshErr) {
+        refreshQueue.forEach(({ reject }) => reject(refreshErr));
+        refreshQueue = [];
+        // Clear server-side cookies and redirect to login
+        try { await api.post('/auth/logout'); } catch { /* ignore */ }
         if (typeof window !== 'undefined') window.location.href = '/login';
         return Promise.reject(error);
       } finally {
@@ -99,6 +92,8 @@ export const categoriesApi = {
 export const cartApi = {
   get: () => api.get('/cart'),
   addItem: (variantId: string, qty: number) => api.post('/cart/items', { variantId, qty }),
+  addCustomItem: (variantId: string, qty: number, customization: any) =>
+    api.post('/cart/custom-item', { variantId, qty, customization }),
   updateItem: (itemId: string, qty: number) => api.patch(`/cart/items/${itemId}`, { qty }),
   removeItem: (itemId: string) => api.delete(`/cart/items/${itemId}`),
 };
@@ -168,6 +163,7 @@ export const uploadsApi = {
 export const adminApi = {
   listUsers: (params?: any) => api.get('/auth/users', { params }),
   toggleUserStatus: (id: string, isActive: boolean) => api.patch(`/auth/users/${id}/status`, { isActive }),
+  deleteUser: (id: string) => api.delete(`/auth/users/${id}`),
 };
 
 // ─── Addresses ────────────────────────────────────────────────────────────────
@@ -247,4 +243,37 @@ export const notificationsApi = {
   markRead: (id: string) => api.patch(`/notifications/${id}/read`),
   markAllRead: () => api.patch('/notifications/read-all'),
   unreadCount: () => api.get('/notifications/unread-count'),
+  delete: (id: string) => api.delete(`/notifications/${id}`),
+};
+
+// ─── Analytics ────────────────────────────────────────────────────────────────
+export const analyticsApi = {
+  adminKpis: (period = '30d') => api.get('/analytics/admin/kpis', { params: { period } }),
+  adminRevenue: (period = '30d') => api.get('/analytics/admin/revenue', { params: { period } }),
+  ordersByStatus: () => api.get('/analytics/admin/orders-by-status'),
+  vendorsRevenue: (limit = 10, period = '30d') => api.get('/analytics/admin/vendors-revenue', { params: { limit, period } }),
+  paymentMethods: () => api.get('/analytics/admin/payment-methods'),
+  systemHealth: () => api.get('/analytics/admin/system-health'),
+  vendorSales: (period = '30d') => api.get('/analytics/vendor/sales', { params: { period } }),
+  vendorOrdersByStatus: () => api.get('/analytics/vendor/orders-by-status'),
+};
+
+// ─── Loyalty ──────────────────────────────────────────────────────────────────
+export const loyaltyApi = {
+  getPoints: () => api.get('/loyalty/points'),
+  getRewards: () => api.get('/loyalty/rewards'),
+  getTierStatus: () => api.get('/loyalty/tier-status'),
+  redeemReward: (rewardId: string) => api.post(`/loyalty/redeem/${rewardId}`),
+};
+
+// ─── Referral ─────────────────────────────────────────────────────────────────
+export const referralApi = {
+  getCode: () => api.get('/referral/code'),
+  getStats: () => api.get('/referral/stats'),
+  claimReferral: (code: string) => api.post('/referral/claim', { code }),
+};
+
+// ─── Recommendations ──────────────────────────────────────────────────────────
+export const recommendationsApi = {
+  get: (limit = 8) => api.get('/products', { params: { limit, sort: 'popular', status: 'ACTIVE' } }),
 };

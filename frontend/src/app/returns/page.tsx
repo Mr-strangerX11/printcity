@@ -3,7 +3,7 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { RotateCcw, Clock, ShieldCheck, AlertCircle, CheckCircle, XCircle, ArrowRight } from 'lucide-react';
 
-export const metadata = { title: 'Returns & Refunds | AP' };
+export const metadata = { title: 'Returns & Refunds | PrintCity' };
 
 const ELIGIBLE = [
   'Item arrived damaged or defective',
@@ -20,7 +20,7 @@ const NOT_ELIGIBLE = [
 ];
 
 const STEPS = [
-  { step: '01', title: 'Contact Support', desc: 'Email us at support@ap.com within 7 days of receiving your order. Include your order ID, photos of the issue, and a brief description.' },
+  { step: '01', title: 'Contact Support', desc: 'Email us at support@PrintCity.com within 7 days of receiving your order. Include your order ID, photos of the issue, and a brief description.' },
   { step: '02', title: 'Get Approval', desc: 'Our team reviews your request within 1–2 business days. We\'ll email you an RMA (Return Merchandise Authorization) number if approved.' },
   { step: '03', title: 'Ship Item Back', desc: 'Pack the item securely and ship it to our returns address with the RMA number clearly marked on the package.' },
   { step: '04', title: 'Refund Processed', desc: 'Once we receive and inspect the item, your refund is processed within 5–7 business days to your original payment method.' },

@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import * as Sentry from '@sentry/nestjs';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -25,7 +26,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const raw =
       exception instanceof HttpException
         ? exception.getResponse()
-        : 'Internal server error';
+        : (exception instanceof Error ? exception.message : null) ?? 'Internal server error';
 
     // Flatten NestJS default shape {message, error, statusCode} → just the message string/array
     let message: string | string[];
@@ -40,6 +41,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     if (status >= 500) {
       this.logger.error(`${req.method} ${req.url}`, exception instanceof Error ? exception.stack : String(exception));
+      Sentry.captureException(exception);
     }
 
     res.status(status).json({

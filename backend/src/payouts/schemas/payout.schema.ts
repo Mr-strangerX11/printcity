@@ -4,7 +4,7 @@ import { PayoutStatus } from '../../common/enums';
 
 export type PayoutDocument = Payout & Document;
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class Payout {
   @Prop({ type: Types.ObjectId, ref: 'Vendor', required: true }) vendorId: Types.ObjectId;
   @Prop({ required: true }) amount: number;

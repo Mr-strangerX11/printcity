@@ -8,7 +8,7 @@ export enum PaymentStatus {
   REFUNDED = 'REFUNDED',
 }
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class Payment extends Document {
   @Prop({ required: true })
   orderId: string;
@@ -37,7 +37,7 @@ export class Payment extends Document {
 
 export const PaymentSchema = SchemaFactory.createForClass(Payment);
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class Coupon extends Document {
   @Prop({ required: true, unique: true })
   code: string;
@@ -72,7 +72,7 @@ export class Coupon extends Document {
 
 export const CouponSchema = SchemaFactory.createForClass(Coupon);
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class Notification extends Document {
   @Prop({ required: true })
   userId: string;

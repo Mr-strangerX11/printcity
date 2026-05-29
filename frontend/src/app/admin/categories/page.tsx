@@ -1,11 +1,13 @@
 'use client';
+/* eslint-disable @next/next/no-img-element */
 
-import React, { useEffect, useState, useCallback } from 'react';
-import { api } from '@/lib/api';
-import { Layers, Plus, Pencil, Trash2, RefreshCw, ImageIcon, X } from 'lucide-react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { api, uploadsApi } from '@/lib/api';
+import { Layers, Plus, Pencil, Trash2, RefreshCw, ImageIcon, X, Upload } from 'lucide-react';
 
 type Category = {
-  id: string;
+  _id?: string;
+  id?: string;
   name: string;
   slug: string;
   description?: string;
@@ -24,6 +26,8 @@ export default function CategoriesPage() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -56,6 +60,23 @@ export default function CategoriesPage() {
     setEditing(null);
     setForm({ ...emptyForm });
     setError('');
+    if (fileRef.current) fileRef.current.value = '';
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setError('');
+    try {
+      const { data } = await uploadsApi.upload(file);
+      const url = data.data?.url ?? data.data?.secure_url ?? data.url ?? data.secure_url;
+      setForm(p => ({ ...p, image: url }));
+    } catch {
+      setError('Image upload failed. Please try again.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const save = async () => {
@@ -69,7 +90,7 @@ export default function CategoriesPage() {
         image: form.image.trim() || undefined,
       };
       if (editing) {
-        await api.patch(`/categories/${editing.id}`, payload);
+        await api.patch(`/categories/${editing._id ?? editing.id}`, payload);
       } else {
         await api.post('/categories', payload);
       }
@@ -84,9 +105,10 @@ export default function CategoriesPage() {
 
   const remove = async (cat: Category) => {
     if (!confirm(`Delete category "${cat.name}"? This cannot be undone.`)) return;
-    setDeleting(cat.id);
+    const cid = cat._id ?? cat.id;
+    setDeleting(cid as string);
     try {
-      await api.delete(`/categories/${cat.id}`);
+      await api.delete(`/categories/${cid}`);
       load();
     } finally {
       setDeleting(null);
@@ -150,7 +172,7 @@ export default function CategoriesPage() {
         ) : (
           <div className="divide-y divide-gray-50">
             {allCategories.map((cat) => (
-              <div key={cat.id} className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50/50">
+              <div key={cat._id ?? cat.id} className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50/50">
                 {/* Image */}
                 <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0 flex items-center justify-center">
                   {cat.image ? (
@@ -180,7 +202,7 @@ export default function CategoriesPage() {
                   </button>
                   <button
                     onClick={() => remove(cat)}
-                    disabled={deleting === cat.id}
+                    disabled={deleting === (cat._id ?? cat.id)}
                     className="p-2 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500 disabled:opacity-50"
                     title="Delete"
                   >
@@ -230,19 +252,55 @@ export default function CategoriesPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Image URL</label>
-                <input
-                  type="url"
-                  placeholder="https://... (optional)"
-                  value={form.image}
-                  onChange={(e) => setForm((p) => ({ ...p, image: e.target.value }))}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400"
-                />
-                {form.image && (
-                  <div className="mt-2 w-16 h-16 rounded-xl overflow-hidden border border-gray-100">
-                    <img src={form.image} alt="preview" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Image</label>
+
+                {form.image ? (
+                  /* Preview with remove button */
+                  <div className="relative w-full h-36 rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
+                    <img
+                      src={form.image}
+                      alt="Category"
+                      className="w-full h-full object-cover"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { setForm(p => ({ ...p, image: '' })); if (fileRef.current) fileRef.current.value = ''; }}
+                      className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5 text-white" />
+                    </button>
                   </div>
+                ) : (
+                  /* Upload zone */
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    disabled={uploading}
+                    className="w-full h-36 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-2 hover:border-violet-400 hover:bg-violet-50/40 transition-colors disabled:opacity-60"
+                  >
+                    {uploading ? (
+                      <>
+                        <RefreshCw className="w-6 h-6 text-violet-500 animate-spin" />
+                        <span className="text-xs text-violet-600 font-medium">Uploading…</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-6 h-6 text-gray-400" />
+                        <span className="text-xs text-gray-500 font-medium">Click to upload image</span>
+                        <span className="text-[11px] text-gray-400">PNG, JPG, WEBP — max 5 MB</span>
+                      </>
+                    )}
+                  </button>
                 )}
+
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
               </div>
 
               {error && (

@@ -14,6 +14,7 @@ import { Product, ProductSchema } from '../products/schemas/product.schema';
 import { ProductImage, ProductImageSchema } from '../products/schemas/product-image.schema';
 import { Payment, PaymentSchema } from '../payments/schemas/payment.schema';
 import { User, UserSchema } from '../user/schemas/user.schema';
+import { LoyaltyModule } from '../loyalty/loyalty.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { User, UserSchema } from '../user/schemas/user.schema';
     NotificationsModule,
     InvoicesModule,
     CouponsModule,
+    LoyaltyModule,
   ],
   controllers: [OrdersController],
   providers: [OrdersService],

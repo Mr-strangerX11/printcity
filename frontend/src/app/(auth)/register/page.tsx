@@ -59,7 +59,7 @@ export default function RegisterPage() {
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <Link href="/" className="inline-flex items-center gap-2 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-brand-gradient flex items-center justify-center text-white font-bold">AP</div>
+              <div className="w-10 h-10 rounded-xl bg-brand-gradient flex items-center justify-center text-white font-bold">PC</div>
             </Link>
             <h1 className="text-3xl font-black text-gray-900">Create an account</h1>
             <p className="text-gray-500 mt-2">Join thousands of creators and customers</p>

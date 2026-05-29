@@ -1,70 +1,26 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Heart, ShoppingCart, Trash2, ArrowRight } from 'lucide-react';
-import { wishlistApi, cartApi } from '@/lib/api';
+import { useWishlistItems } from '@/hooks';
 import { useWishlist } from '@/context/WishlistContext';
 import { formatPrice } from '@/lib/utils';
 import { toast } from 'sonner';
 
-interface WishlistItem {
-  id: string;
-  productId: string;
-  createdAt: string;
-  product: {
-    id: string;
-    title: string;
-    slug: string;
-    basePrice: string | number;
-    images: { url: string }[];
-    variants: { price: string | number; color: string; size: string }[];
-    vendor: { storeName: string; storeSlug: string } | null;
-    category: { name: string } | null;
-  };
-}
-
 export default function WishlistPage() {
-  const [items, setItems] = useState<WishlistItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [addingToCart, setAddingToCart] = useState<string | null>(null);
-  const { toggle, refresh: refreshWishlist } = useWishlist();
-
-  const load = async () => {
-    setLoading(true);
-    try {
-      const { data } = await wishlistApi.get();
-      setItems(data.data ?? []);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { load(); }, []);
+  const { data, loading, refetch } = useWishlistItems();
+  const items = data ?? [];
+  const { toggle } = useWishlist();
 
   const handleRemove = async (productId: string) => {
     await toggle(productId);
-    setItems(prev => prev.filter(i => i.productId !== productId));
+    refetch();
     toast.success('Removed from wishlist');
   };
 
-  const handleAddToCart = async (item: WishlistItem) => {
-    const firstVariant = item.product.variants?.[0];
-    if (!firstVariant) {
-      toast.error('No variants available');
-      return;
-    }
-    setAddingToCart(item.productId);
-    try {
-      // We need a variantId — fetch from products for now
-      toast.info('Visit the product page to select size & color');
-    } finally {
-      setAddingToCart(null);
-    }
-  };
-
-  if (loading) {
+if (loading) {
     return (
       <div className="space-y-4">
         <div className="h-8 bg-gray-100 rounded-xl w-40 animate-pulse" />

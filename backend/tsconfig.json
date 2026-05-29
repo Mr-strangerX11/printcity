@@ -14,14 +14,17 @@
     "incremental": false,
     "skipLibCheck": true,
     "strictNullChecks": true,
-    "noImplicitAny": false,
+    "noImplicitAny": true,
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": [
+        "src/*"
+      ]
     },
-    "rootDir": "./"
+    "rootDir": "./",
+    "types": ["jest", "node"]
   },
   "exclude": ["node_modules", "dist", "prisma"]
 }

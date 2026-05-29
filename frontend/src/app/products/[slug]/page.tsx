@@ -1,19 +1,19 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+// useEffect kept for variant initialisation on product load
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ShoppingCart, Heart, Star, ChevronLeft, Minus, Plus, Check, Share2, Truck, Shield, RefreshCw, ZoomIn } from 'lucide-react';
+import { ShoppingCart, Heart, Star, Minus, Plus, Share2, Truck, Shield, RefreshCw, ZoomIn, Paintbrush } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { ProductCard } from '@/components/ui/ProductCard';
-import { productsApi } from '@/lib/api';
+import { useProduct, useProducts } from '@/hooks';
 import { getErrorMsg } from '@/lib/utils';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useWishlist } from '@/context/WishlistContext';
-import { Product, ProductVariant } from '@/types';
 import { formatPrice } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -37,9 +37,6 @@ export default function ProductDetailPage() {
   const { user } = useAuth();
   const { addItem } = useCart();
   const { isInWishlist, toggle: toggleWishlist, pending: wishlistPending } = useWishlist();
-  const [product, setProduct] = useState<Product | null>(null);
-  const [related, setRelated] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedColor, setSelectedColor] = useState('');
   const [selectedSize, setSelectedSize] = useState('');
@@ -47,28 +44,21 @@ export default function ProductDetailPage() {
   const [addingToCart, setAddingToCart] = useState(false);
   const [zoomOpen, setZoomOpen] = useState(false);
 
+  const { data: product, loading } = useProduct(slug);
+
+  const { data: relatedData } = useProducts(
+    { category: product?.category?.slug ?? '', limit: 4, status: 'ACTIVE' },
+    { enabled: !!product?.category?.slug },
+  );
+  const related = (relatedData?.items ?? []).filter((item) => item.id !== product?.id).slice(0, 4);
+
+  // Initialise variant selection when product loads
   useEffect(() => {
-    setLoading(true);
-    productsApi.get(slug).then(({ data }) => {
-      const p = data.data as Product;
-      setProduct(p);
-      const variant = p?.variants?.[0];
-      if (variant) {
-        setSelectedColor(variant.color);
-        setSelectedSize(variant.size);
-      }
-      // Fetch related products in same category
-      if (p?.category?.slug) {
-        productsApi.list({ category: p.category.slug, limit: 4, status: 'ACTIVE' })
-          .then(({ data: r }) => {
-            const items: Product[] = r.data.items ?? [];
-            setRelated(items.filter(item => item.id !== p.id).slice(0, 4));
-          })
-          .catch(() => {});
-      }
-    }).catch(() => setProduct(null))
-    .finally(() => setLoading(false));
-  }, [slug]);
+    if (product?.variants?.[0]) {
+      setSelectedColor(product.variants[0].color);
+      setSelectedSize(product.variants[0].size);
+    }
+  }, [product]);
 
   const avgRating = product?.reviews?.length
     ? product.reviews.reduce((s, r) => s + r.rating, 0) / product.reviews.length
@@ -325,6 +315,13 @@ export default function ProductDetailPage() {
                 }
                 {addingToCart ? 'Adding...' : 'Add to Cart'}
               </button>
+              {product.customizable && (
+                <Link href={`/products/${product.slug}/customize`}
+                  className="flex items-center justify-center gap-2 px-5 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl transition-all active:scale-[0.98] shadow-sm shadow-indigo-200">
+                  <Paintbrush className="w-5 h-5" />
+                  Customize
+                </Link>
+              )}
               <button
                 onClick={async () => {
                   if (!user) { toast.error('Sign in to save to wishlist'); return; }

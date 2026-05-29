@@ -1,6 +1,7 @@
-import { Controller, Post, Body, Get, Patch, Param, Query, UseGuards, Req } from '@nestjs/common';
+import { Controller, Post, Body, Get, Patch, Delete, Param, Query, UseGuards, Res, Req } from '@nestjs/common';
+import { Response, Request } from 'express';
 import { UpdateProfileDto } from './dto/update-profile.dto';
-import { AuthGuard } from '@nestjs/passport';
+import { ListUsersDto } from './dto/list-users.dto';
 import { AuthService } from './auth.service';
 import { Throttle } from '@nestjs/throttler';
 import { RegisterDto } from './dto/register.dto';
@@ -11,6 +12,23 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import { Role } from '../user/schemas/user.schema';
+
+const IS_PROD = process.env.NODE_ENV === 'production';
+
+function setAuthCookies(res: Response, accessToken: string, refreshToken: string) {
+  res.cookie('accessToken', accessToken, {
+    httpOnly: true,
+    secure: IS_PROD,
+    sameSite: IS_PROD ? 'none' : 'lax',
+    maxAge: 15 * 60 * 1000, // 15 minutes
+  });
+  res.cookie('refreshToken', refreshToken, {
+    httpOnly: true,
+    secure: IS_PROD,
+    sameSite: IS_PROD ? 'none' : 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  });
+}
 
 @Controller('auth')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -27,14 +45,34 @@ export class AuthController {
   @Public()
   @Throttle({ default: { ttl: 60000, limit: 10 } })
   @Post('login')
-  login(@Body() dto: LoginDto) {
-    return this.authService.login(dto);
+  async login(
+    @Body() dto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { accessToken, refreshToken, role } = await this.authService.login(dto);
+    setAuthCookies(res, accessToken, refreshToken);
+    return { role };
   }
 
   @Public()
+  @Throttle({ default: { ttl: 60000, limit: 10 } })
   @Post('refresh')
-  refresh(@Body('refreshToken') token: string) {
-    return this.authService.refresh(token);
+  async refresh(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const token = req.cookies?.refreshToken;
+    const { accessToken, refreshToken, role } = await this.authService.refresh(token);
+    setAuthCookies(res, accessToken, refreshToken);
+    return { role };
+  }
+
+  @Public()
+  @Post('logout')
+  logout(@Res({ passthrough: true }) res: Response) {
+    res.clearCookie('accessToken', { httpOnly: true, secure: IS_PROD, sameSite: IS_PROD ? 'none' : 'lax' });
+    res.clearCookie('refreshToken', { httpOnly: true, secure: IS_PROD, sameSite: IS_PROD ? 'none' : 'lax' });
+    return { success: true };
   }
 
   @UseGuards(JwtAuthGuard)
@@ -50,7 +88,7 @@ export class AuthController {
 
   @Roles(Role.ADMIN)
   @Get('users')
-  listUsers(@Query() query: any) {
+  listUsers(@Query() query: ListUsersDto) {
     return this.authService.listUsers(query);
   }
 
@@ -60,11 +98,23 @@ export class AuthController {
     return this.authService.toggleUserStatus(id, isActive);
   }
 
+  @Roles(Role.ADMIN)
+  @Delete('users/:id')
+  deleteUser(@Param('id') id: string) {
+    return this.authService.deleteUser(id);
+  }
+
   @Public()
   @Throttle({ default: { ttl: 60000, limit: 10 } })
   @Post('verify-otp')
-  verifyOtp(@Body('email') email: string, @Body('otp') otp: string) {
-    return this.authService.verifyOtp(email, otp);
+  async verifyOtp(
+    @Body('email') email: string,
+    @Body('otp') otp: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { accessToken, refreshToken, role } = await this.authService.verifyOtp(email, otp);
+    setAuthCookies(res, accessToken, refreshToken);
+    return { role };
   }
 
   @Public()
@@ -78,17 +128,5 @@ export class AuthController {
   @Post('create-vendor')
   createVendor(@Body() dto: { name: string; email: string; password: string; storeName: string }) {
     return this.authService.createVendorByAdmin(dto);
-  }
-
-  @Public()
-  @Get('google')
-  @UseGuards(AuthGuard('google'))
-  googleLogin() {}
-
-  @Public()
-  @Get('google/callback')
-  @UseGuards(AuthGuard('google'))
-  googleCallback(@Req() req: any) {
-    return this.authService.handleGoogleLogin(req.user);
   }
 }

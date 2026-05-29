@@ -1,4 +1,4 @@
-# AP — Custom Print Marketplace
+# PrintCity — Custom Print Marketplace
 
 Premium multi-vendor custom print marketplace. Vendors upload designs, customers buy or upload their own artwork, admin handles fulfillment.
 
@@ -31,8 +31,8 @@ cp .env.example .env
 docker-compose up -d
 
 # 3. Run migrations + seed
-docker exec ap_api npx prisma migrate deploy
-docker exec ap_api npx ts-node prisma/seed.ts
+docker exec PrintCity_api npx prisma migrate deploy
+docker exec PrintCity_api npx ts-node prisma/seed.ts
 ```
 
 App will be at:
@@ -77,17 +77,17 @@ pnpm dev
 
 | Role | Email | Password |
 |---|---|---|
-| Admin | admin@ap.com | Admin@123 |
-| Vendor 1 | vendor1@ap.com | Vendor@123 |
-| Vendor 2 | vendor2@ap.com | Vendor@123 |
-| Customer | customer@ap.com | Customer@123 |
+| Admin | admin@PrintCity.com | Admin@123 |
+| Vendor 1 | vendor1@PrintCity.com | Vendor@123 |
+| Vendor 2 | vendor2@PrintCity.com | Vendor@123 |
+| Customer | customer@PrintCity.com | Customer@123 |
 
 ---
 
 ## Project Structure
 
 ```
-ap/
+PrintCity/
 ├── apps/
 │   ├── api/                    # NestJS API
 │   │   ├── prisma/

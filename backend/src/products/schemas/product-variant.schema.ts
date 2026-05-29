@@ -3,7 +3,7 @@ import { Document, Types } from 'mongoose';
 
 export type ProductVariantDocument = ProductVariant & Document;
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class ProductVariant {
   @Prop({ type: Types.ObjectId, ref: 'Product', required: true }) productId: Types.ObjectId;
   @Prop({ required: true }) size: string;

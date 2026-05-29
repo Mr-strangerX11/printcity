@@ -25,6 +25,12 @@ import { Role } from '../user/schemas/user.schema';
 export class ProductsController {
   constructor(private productsService: ProductsService) {}
 
+  @Get('stats')
+  @Roles(Role.ADMIN)
+  getStats() {
+    return this.productsService.getStats();
+  }
+
   @Public()
   @Get()
   findAll(@Query() query: any, @CurrentUser() user: any): Promise<any> {

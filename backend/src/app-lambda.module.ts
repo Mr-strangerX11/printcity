@@ -5,6 +5,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { MongooseModule } from '@nestjs/mongoose';
 
 import { MailModule } from './mail/mail.module';
+import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { ProductsModule } from './products/products.module';
 import { CategoriesModule } from './categories/categories.module';
@@ -25,6 +26,9 @@ import { ProductionModule } from './production/production.module';
 import { SupportModule } from './support/support.module';
 import { DesignsModule } from './designs/designs.module';
 import { PrintSecureModule } from './print-secure/print-secure.module';
+import { AnalyticsModule } from './analytics/analytics.module';
+import { LoyaltyModule } from './loyalty/loyalty.module';
+import { ReferralModule } from './referral/referral.module';
 import { AuditLog, AuditLogSchema } from './common/schemas/audit-log.schema';
 import { Product, ProductSchema, ProductStatus } from './common/schemas/product.schema';
 import { Vendor, VendorSchema } from './common/schemas/vendor.schema';
@@ -79,6 +83,7 @@ import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor
       { name: OrderItem.name, schema: OrderItemSchema },
     ]),
     MailModule,
+    HealthModule,
     AuthModule,
     ProductsModule,
     CategoriesModule,
@@ -99,6 +104,9 @@ import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor
     SupportModule,
     DesignsModule,
     PrintSecureModule,
+    AnalyticsModule,
+    LoyaltyModule,
+    ReferralModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

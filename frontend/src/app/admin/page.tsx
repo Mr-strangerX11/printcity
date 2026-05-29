@@ -1,215 +1,344 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { ShoppingBag, Users, DollarSign, Package, AlertCircle, Clock, CheckCircle, XCircle, TrendingUp, ArrowUpRight } from 'lucide-react';
-import { ordersApi, vendorsApi, productsApi } from '@/lib/api';
-import { formatPrice, formatDate } from '@/lib/utils';
+import {
+  ShoppingBag, Users, DollarSign, Package, AlertCircle, Clock,
+  CheckCircle, XCircle, TrendingUp, TrendingDown, ArrowUpRight,
+  Activity, Database, CreditCard, Mail, Server, RefreshCw,
+  AlertTriangle, Zap, BarChart2, Target,
+} from 'lucide-react';
+import {
+  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+} from 'recharts';
+import { useOrders, useOrderStats } from '@/hooks';
+import { useVendors } from '@/hooks';
+import { useProducts } from '@/hooks';
+import {
+  useAdminKpis, useRevenueAnalytics, useOrdersByStatus,
+  useVendorsRevenue, usePaymentMethods, useSystemHealth,
+} from '@/hooks';
+import { vendorsApi } from '@/lib/api';
+import { StatCard, ChartContainer, AlertCard, SkeletonLoader } from '@/components/shared';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import { Order } from '@/types';
+import { formatPrice, formatDate } from '@/lib/utils';
+import type { Period } from '@/hooks';
 
-// Pure-SVG sparkline — no external deps
-function Sparkline({ data, color = '#2563EB', height = 36 }: { data: number[]; color?: string; height?: number }) {
-  if (data.length < 2) return null;
-  const max = Math.max(...data, 1);
-  const min = Math.min(...data);
-  const range = max - min || 1;
-  const w = 100;
-  const pts = data
-    .map((v, i) => `${(i / (data.length - 1)) * w},${height - ((v - min) / range) * (height - 4)}`)
-    .join(' ');
-  const area = `0,${height} ${pts} ${w},${height}`;
-  return (
-    <svg viewBox={`0 0 ${w} ${height}`} className="w-full h-full overflow-visible">
-      <defs>
-        <linearGradient id={`sg-${color.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.3" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <polygon points={area} fill={`url(#sg-${color.replace('#', '')})`} />
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      {/* Last point dot */}
-      {data.length > 0 && (() => {
-        const last = data[data.length - 1];
-        const lx = w;
-        const ly = height - ((last - min) / range) * (height - 4);
-        return <circle cx={lx} cy={ly} r="3" fill={color} />;
-      })()}
-    </svg>
-  );
-}
+const STATUS_COLORS: Record<string, string> = {
+  PENDING: '#f59e0b', CONFIRMED: '#3b82f6', PRINTING: '#8b5cf6',
+  PACKED: '#6366f1', SHIPPED: '#06b6d4', DELIVERED: '#22c55e',
+  CANCELLED: '#ef4444', REFUNDED: '#6b7280',
+};
+
+const HEALTH_COLOR = (status: string) =>
+  status === 'operational' || status === 'healthy' ? 'text-green-600' : 'text-red-500';
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState({ orders: 0, revenue: 0, pendingVendorsCount: 0, products: 0, pending: 0, delivered: 0 });
-  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
-  const [pendingVendors, setPendingVendors] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState<Period>('30d');
   const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [dismissedAlerts, setDismissedAlerts] = useState<string[]>([]);
 
-  const load = () => {
-    setLoading(true);
-    Promise.all([
-      ordersApi.list({ limit: 10 }),
-      ordersApi.stats(),
-      vendorsApi.list({ status: 'PENDING', limit: 5 }),
-      productsApi.list({ limit: 1 }),
-    ]).then(([orders, statsRes, vendors, products]) => {
-      const orderItems: Order[] = orders.data.data.items ?? [];
-      setRecentOrders(orderItems);
-      const pendingVs = vendors.data.data ?? [];
-      setPendingVendors(pendingVs);
-      const s = statsRes.data.data;
-      setStats({
-        orders: s.totalOrders ?? orders.data.data.meta?.total ?? 0,
-        revenue: s.totalRevenue ?? 0,
-        pendingVendorsCount: pendingVs.length,
-        products: products.data.data.meta?.total ?? 0,
-        pending: s.pendingOrders ?? 0,
-        delivered: s.deliveredOrders ?? 0,
-      });
-    }).finally(() => setLoading(false));
-  };
+  // Existing hooks
+  const { data: ordersData, loading: ordersLoading } = useOrders({ limit: 10 });
+  const { data: orderStats } = useOrderStats();
+  const { data: pendingVendors = [], refetch: refetchVendors } = useVendors({ status: 'PENDING', limit: 5 });
+  const { data: productsData } = useProducts({ limit: 1 });
 
-  useEffect(() => { load(); }, []);
+  // Analytics hooks (require new backend module)
+  const { data: kpis, loading: kpisLoading } = useAdminKpis(period);
+  const { data: revenueData = [], loading: revenueLoading } = useRevenueAnalytics(period);
+  const { data: orderStatusData = [] } = useOrdersByStatus();
+  const { data: vendorsRevenue = [] } = useVendorsRevenue(10, period);
+  const { data: paymentData = [] } = usePaymentMethods();
+  const { data: health } = useSystemHealth();
+
+  const recentOrders = ordersData?.items ?? [];
+
+  // Build derived stats from existing data when analytics not available
+  const revenue = kpis?.revenue?.current ?? (orderStats as any)?.totalRevenue ?? 0;
+  const totalOrders = kpis?.orders?.current ?? (orderStats as any)?.totalOrders ?? ordersData?.meta?.total ?? 0;
+  const pendingCount = kpis?.pendingOrders ?? (orderStats as any)?.pendingOrders ?? 0;
+  const pendingVendorCount = Array.isArray(pendingVendors) ? pendingVendors.length : 0;
+  const productsTotal = productsData?.meta?.total ?? 0;
+
+  // Alerts derived from existing data
+  const alerts = [
+    pendingCount > 0 && { id: 'pending-orders', priority: 'warning' as const, title: `${pendingCount} orders pending`, message: 'Orders waiting for confirmation', actionLabel: 'View Orders', actionHref: '/admin/orders?status=PENDING' },
+    pendingVendorCount > 0 && { id: 'pending-vendors', priority: 'info' as const, title: `${pendingVendorCount} vendors awaiting approval`, message: 'Review and approve vendor applications', actionLabel: 'View Vendors', actionHref: '/admin/vendors?status=PENDING' },
+  ].filter(Boolean).filter(a => a && !dismissedAlerts.includes((a as any).id)) as any[];
 
   const handleVendorAction = async (vendorId: string, action: 'approve' | 'reject') => {
     setApprovingId(vendorId);
     try {
       await vendorsApi.updateStatus(vendorId, action === 'approve' ? 'ACTIVE' : 'SUSPENDED');
-      setPendingVendors(prev => prev.filter(v => v.id !== vendorId));
-      setStats(prev => ({ ...prev, pendingVendorsCount: prev.pendingVendorsCount - 1 }));
-    } catch { /* keep in list */ }
-    finally { setApprovingId(null); }
+      refetchVendors();
+    } finally { setApprovingId(null); }
   };
 
-  // Generate fake sparkline data from orders (last 7 data points)
-  const revenueSparkData = recentOrders.slice(0, 7).reverse().map((o) => Number(o.totalAmount));
-  const orderSparkData = [3, 5, 4, 7, 6, 9, stats.orders % 10 + 2];
+  const periodOptions = [
+    { value: '7d', label: '7 days' },
+    { value: '30d', label: '30 days' },
+    { value: '90d', label: '90 days' },
+  ];
 
-  if (loading) return (
-    <div className="space-y-4 animate-pulse">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[1,2,3,4].map(i => <div key={i} className="h-28 bg-gray-100 rounded-2xl" />)}
-      </div>
-      <div className="h-64 bg-gray-100 rounded-2xl" />
-    </div>
-  );
+  const trendFromKpi = (metric: { trend?: string; current?: number; previous?: number } | undefined) => {
+    if (!metric) return undefined;
+    if (metric.trend) {
+      const positive = !metric.trend.startsWith('-');
+      return { value: metric.trend, positive };
+    }
+    return undefined;
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* ── Header ────────────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-gray-900">Admin Dashboard</h1>
           <p className="text-gray-500 mt-1 text-sm">Platform overview and operations</p>
         </div>
-        <div className="text-right hidden sm:block flex-shrink-0">
-          <p className="text-xs text-gray-400">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+        <div className="flex items-center gap-3">
+          <select
+            value={period}
+            onChange={e => setPeriod(e.target.value as Period)}
+            className="px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          >
+            {periodOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+          <p className="text-xs text-gray-400 hidden sm:block">
+            {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+          </p>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          {
-            label: 'Total Orders',
-            value: stats.orders.toLocaleString(),
-            icon: <ShoppingBag className="w-5 h-5 text-blue-500" />,
-            bg: 'bg-blue-50',
-            href: '/admin/orders',
-            sub: `${stats.pending} pending`,
-            spark: orderSparkData,
-            color: '#3b82f6',
-            trend: '+12%',
-          },
-          {
-            label: 'Revenue (Paid)',
-            value: formatPrice(stats.revenue),
-            icon: <DollarSign className="w-5 h-5 text-green-500" />,
-            bg: 'bg-green-50',
-            href: '/admin/payouts',
-            sub: 'from paid orders',
-            spark: revenueSparkData,
-            color: '#22c55e',
-            trend: '+8%',
-          },
-          {
-            label: 'Pending Vendors',
-            value: stats.pendingVendorsCount.toString(),
-            icon: <Users className="w-5 h-5 text-yellow-500" />,
-            bg: 'bg-yellow-50',
-            href: '/admin/vendors',
-            sub: 'awaiting approval',
-            spark: [2, 3, 1, 4, 2, stats.pendingVendorsCount, stats.pendingVendorsCount],
-            color: '#eab308',
-            trend: null,
-          },
-          {
-            label: 'Products',
-            value: stats.products.toLocaleString(),
-            icon: <Package className="w-5 h-5 text-purple-500" />,
-            bg: 'bg-purple-50',
-            href: '/admin/products',
-            sub: 'active listings',
-            spark: [20, 25, 22, 28, 30, 27, stats.products % 10 + 25],
-            color: '#a855f7',
-            trend: '+5%',
-          },
-        ].map(s => (
-          <Link key={s.label} href={s.href}
-            className="bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-md hover:border-gray-200 transition-all group">
-            <div className="flex items-start justify-between mb-3">
-              <div className={`w-10 h-10 rounded-xl ${s.bg} flex items-center justify-center`}>{s.icon}</div>
-              {s.trend && (
-                <span className="flex items-center gap-0.5 text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
-                  <TrendingUp className="w-3 h-3" /> {s.trend}
-                </span>
-              )}
-            </div>
-            <p className="text-2xl font-black text-gray-900">{s.value}</p>
-            <p className="text-xs font-semibold text-gray-700 mt-0.5">{s.label}</p>
-            <p className="text-xs text-gray-400 mb-3">{s.sub}</p>
-            <div className="h-8 opacity-70 group-hover:opacity-100 transition-opacity">
-              <Sparkline data={s.spark} color={s.color} height={32} />
-            </div>
-          </Link>
-        ))}
-      </div>
-
-      {/* Alerts */}
-      {(stats.pending > 0 || stats.pendingVendorsCount > 0) && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {stats.pending > 0 && (
-            <Link href="/admin/orders?status=PENDING"
-              className="flex items-center gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-2xl hover:bg-yellow-100 transition-colors group">
-              <div className="w-9 h-9 bg-yellow-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                <AlertCircle className="w-5 h-5 text-yellow-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-yellow-900 text-sm">{stats.pending} orders pending</p>
-                <p className="text-xs text-yellow-700">Need confirmation</p>
-              </div>
-              <ArrowUpRight className="w-4 h-4 text-yellow-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-            </Link>
-          )}
-          {stats.pendingVendorsCount > 0 && (
-            <Link href="/admin/vendors?status=PENDING"
-              className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-2xl hover:bg-blue-100 transition-colors group">
-              <div className="w-9 h-9 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Clock className="w-5 h-5 text-blue-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-blue-900 text-sm">{stats.pendingVendorsCount} vendors awaiting approval</p>
-                <p className="text-xs text-blue-700">Review applications below</p>
-              </div>
-              <ArrowUpRight className="w-4 h-4 text-blue-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-            </Link>
-          )}
+      {/* ── Alerts ────────────────────────────────────────────────────────── */}
+      {alerts.length > 0 && (
+        <div className="space-y-2">
+          {alerts.map((a: any) => (
+            <AlertCard
+              key={a.id}
+              priority={a.priority}
+              title={a.title}
+              message={a.message}
+              actionLabel={a.actionLabel}
+              actionHref={a.actionHref}
+              onDismiss={() => setDismissedAlerts(p => [...p, a.id])}
+            />
+          ))}
         </div>
       )}
 
+      {/* ── KPI Cards ─────────────────────────────────────────────────────── */}
+      {kpisLoading ? (
+        <SkeletonLoader variant="card" count={4} />
+      ) : (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            label="Total Revenue"
+            value={formatPrice(revenue)}
+            icon={<DollarSign className="w-5 h-5 text-green-500" />}
+            trend={trendFromKpi(kpis?.revenue)}
+            sub={`${period} period`}
+            href="/admin/payouts"
+          />
+          <StatCard
+            label="Total Orders"
+            value={totalOrders.toLocaleString()}
+            icon={<ShoppingBag className="w-5 h-5 text-blue-500" />}
+            trend={trendFromKpi(kpis?.orders)}
+            sub={pendingCount > 0 ? `${pendingCount} pending` : 'All fulfilled'}
+            href="/admin/orders"
+          />
+          <StatCard
+            label="Avg Order Value"
+            value={formatPrice(kpis?.aov?.current ?? (revenue / Math.max(totalOrders, 1)))}
+            icon={<Target className="w-5 h-5 text-purple-500" />}
+            trend={trendFromKpi(kpis?.aov)}
+            href="/admin/orders"
+          />
+          <StatCard
+            label="Active Vendors"
+            value={(kpis?.vendors?.current ?? 0).toLocaleString() || '—'}
+            icon={<Users className="w-5 h-5 text-yellow-500" />}
+            trend={trendFromKpi(kpis?.vendors)}
+            sub={pendingVendorCount > 0 ? `${pendingVendorCount} pending` : 'All active'}
+            href="/admin/vendors"
+          />
+        </div>
+      )}
+
+      {/* ── Charts Row ────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Revenue Trend */}
+        <ChartContainer
+          title="Revenue Trend"
+          subtitle="Daily revenue"
+          className="lg:col-span-2"
+          loading={revenueLoading}
+          periodSelector={{ value: period, onChange: v => setPeriod(v as Period), options: periodOptions }}
+        >
+          {revenueData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={220}>
+              <LineChart data={revenueData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={v => v.slice(5)}
+                  tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false}
+                  tickFormatter={v => `Rs.${(v / 1000).toFixed(0)}k`} />
+                <Tooltip
+                  formatter={(v: number) => [formatPrice(v), 'Revenue']}
+                  labelFormatter={l => `Date: ${l}`}
+                  contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', fontSize: 12 }}
+                />
+                <Line type="monotone" dataKey="revenue" stroke="#3b82f6" strokeWidth={2}
+                  dot={false} activeDot={{ r: 5, fill: '#3b82f6' }} />
+                <Line type="monotone" dataKey="orders" stroke="#a855f7" strokeWidth={1.5}
+                  dot={false} strokeDasharray="4 2" />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[220px] flex items-center justify-center text-gray-400 text-sm">
+              <div className="text-center">
+                <BarChart2 className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                Analytics module loading…
+              </div>
+            </div>
+          )}
+        </ChartContainer>
+
+        {/* Orders by Status */}
+        <ChartContainer title="Orders by Status" subtitle="Current breakdown">
+          {orderStatusData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={220}>
+              <PieChart>
+                <Pie data={orderStatusData} dataKey="count" nameKey="status"
+                  cx="50%" cy="50%" outerRadius={80} innerRadius={45}>
+                  {orderStatusData.map((entry: any, i: number) => (
+                    <Cell key={i} fill={STATUS_COLORS[entry.status] ?? '#6b7280'} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(v: number, name: string) => [v, name]}
+                  contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', fontSize: 12 }}
+                />
+                <Legend iconType="circle" iconSize={8}
+                  formatter={(v: string) => <span style={{ fontSize: 11 }}>{v}</span>} />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[220px] flex items-center justify-center text-gray-400 text-sm">
+              <div className="text-center">
+                <Package className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                No data yet
+              </div>
+            </div>
+          )}
+        </ChartContainer>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Top Vendors by Revenue */}
+        <ChartContainer title="Top Vendors" subtitle="By revenue this period"
+          periodSelector={{ value: period, onChange: v => setPeriod(v as Period), options: periodOptions }}>
+          {vendorsRevenue.length > 0 ? (
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={vendorsRevenue.slice(0, 8)} layout="vertical"
+                margin={{ top: 0, right: 10, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 10 }} tickLine={false} axisLine={false}
+                  tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
+                <YAxis type="category" dataKey="vendorName" width={80} tick={{ fontSize: 10 }}
+                  tickLine={false} axisLine={false}
+                  tickFormatter={v => v.length > 12 ? `${v.slice(0, 12)}…` : v} />
+                <Tooltip formatter={(v: number) => [formatPrice(v), 'Revenue']}
+                  contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', fontSize: 12 }} />
+                <Bar dataKey="revenue" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[220px] flex items-center justify-center text-gray-400 text-sm">
+              <div className="text-center">
+                <Users className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                Analytics module loading…
+              </div>
+            </div>
+          )}
+        </ChartContainer>
+
+        {/* Payment Methods */}
+        <ChartContainer title="Payment Methods" subtitle="Transaction breakdown">
+          {paymentData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={paymentData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                <XAxis dataKey="method" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                <Tooltip
+                  formatter={(v: number, n: string) => [n === 'totalAmount' ? formatPrice(v) : v, n === 'totalAmount' ? 'Amount' : 'Count']}
+                  contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', fontSize: 12 }}
+                />
+                <Bar dataKey="transactionCount" name="Transactions" fill="#8b5cf6" radius={[4,4,0,0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[220px] flex items-center justify-center text-gray-400 text-sm">
+              <div className="text-center">
+                <CreditCard className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                No payment data
+              </div>
+            </div>
+          )}
+        </ChartContainer>
+      </div>
+
+      {/* ── System Health ─────────────────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-6">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2">
+            <Activity className="w-5 h-5 text-green-500" />
+            <h2 className="font-black text-gray-900">System Health</h2>
+          </div>
+          <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
+            health?.status === 'healthy' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'
+          }`}>
+            <span className={`w-2 h-2 rounded-full ${health?.status === 'healthy' ? 'bg-green-500' : 'bg-red-500'}`} />
+            {health?.status === 'healthy' ? 'All Systems Operational' : (health ? 'Degraded' : 'Checking…')}
+          </div>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {[
+            { key: 'api', label: 'API', icon: <Server className="w-4 h-4" />, fallback: 'operational' },
+            { key: 'database', label: 'Database', icon: <Database className="w-4 h-4" />, fallback: 'operational' },
+            { key: 'payments', label: 'Payments', icon: <CreditCard className="w-4 h-4" />, fallback: 'operational' },
+            { key: 'email', label: 'Email', icon: <Mail className="w-4 h-4" />, fallback: 'operational' },
+            { key: 'storage', label: 'Storage', icon: <Server className="w-4 h-4" />, fallback: 'operational' },
+            { key: 'cache', label: 'Redis', icon: <Zap className="w-4 h-4" />, fallback: 'operational' },
+          ].map(s => {
+            const svc = health?.services?.[s.key];
+            const status = svc?.status ?? s.fallback;
+            const isOk = status === 'operational';
+            return (
+              <div key={s.key} className={`p-3 rounded-xl border ${isOk ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100'}`}>
+                <div className={`flex items-center gap-1.5 mb-1 ${isOk ? 'text-green-600' : 'text-red-500'}`}>
+                  {s.icon}
+                  <span className="text-xs font-bold">{s.label}</span>
+                </div>
+                <p className={`text-xs font-semibold ${isOk ? 'text-green-700' : 'text-red-600'}`}>
+                  {isOk ? '🟢 OK' : '🔴 Down'}
+                </p>
+                {svc?.responseTime && (
+                  <p className="text-xs text-gray-400 mt-0.5">{svc.responseTime}ms</p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Recent Orders + Pending Vendors ──────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* Recent Orders */}
         <div className="lg:col-span-3 bg-white rounded-2xl border border-gray-100 overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
             <h2 className="font-black text-gray-900">Recent Orders</h2>
@@ -217,11 +346,13 @@ export default function AdminDashboard() {
               View all <ArrowUpRight className="w-3 h-3" />
             </Link>
           </div>
-          <div className="divide-y divide-gray-50">
-            {recentOrders.length === 0 ? (
-              <div className="px-5 py-10 text-center text-gray-400 text-sm">No orders yet</div>
-            ) : (
-              recentOrders.slice(0, 7).map(order => (
+          {ordersLoading ? (
+            <div className="p-4"><SkeletonLoader variant="row" count={5} /></div>
+          ) : (
+            <div className="divide-y divide-gray-50">
+              {recentOrders.length === 0 ? (
+                <div className="px-5 py-10 text-center text-gray-400 text-sm">No orders yet</div>
+              ) : recentOrders.slice(0, 7).map(order => (
                 <Link key={order.id} href={`/admin/orders/${order.id}`}
                   className="flex items-center justify-between px-5 py-3.5 hover:bg-gray-50 transition-colors">
                   <div className="min-w-0">
@@ -231,55 +362,45 @@ export default function AdminDashboard() {
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <span className="hidden sm:block"><StatusBadge status={order.paymentStatus} type="payment" /></span>
                     <StatusBadge status={order.orderStatus} type="order" />
-                    <p className="text-sm font-black text-gray-900 text-right">{formatPrice(order.totalAmount)}</p>
+                    <p className="text-sm font-black text-gray-900">{formatPrice(order.totalAmount)}</p>
                   </div>
                 </Link>
-              ))
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Pending Vendors — with inline approve/reject */}
         <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
             <h2 className="font-black text-gray-900">Pending Vendors</h2>
-            <Link href="/admin/vendors" className="text-xs text-blue-600 font-semibold hover:text-blue-700">
-              View all
-            </Link>
+            <Link href="/admin/vendors" className="text-xs text-blue-600 font-semibold hover:text-blue-700">View all</Link>
           </div>
-          {pendingVendors.length === 0 ? (
+          {pendingVendorCount === 0 ? (
             <div className="p-10 text-center">
               <CheckCircle className="w-10 h-10 text-gray-200 mx-auto mb-2" />
               <p className="text-sm text-gray-500 font-medium">All caught up!</p>
-              <p className="text-xs text-gray-400">No pending vendor applications</p>
+              <p className="text-xs text-gray-400">No pending applications</p>
             </div>
           ) : (
             <div className="divide-y divide-gray-50">
-              {pendingVendors.map((v: any) => (
+              {(Array.isArray(pendingVendors) ? pendingVendors : []).map((v: any) => (
                 <div key={v.id} className="px-5 py-3.5">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="min-w-0">
-                      <p className="font-bold text-sm text-gray-900 truncate">{v.storeName}</p>
-                      <p className="text-xs text-gray-400 truncate">{v.user?.email}</p>
-                      <p className="text-xs text-gray-400">{formatDate(v.createdAt)}</p>
-                    </div>
+                  <div className="mb-2">
+                    <p className="font-bold text-sm text-gray-900 truncate">{v.storeName}</p>
+                    <p className="text-xs text-gray-400 truncate">{v.user?.email ?? v.email}</p>
+                    <p className="text-xs text-gray-400">{formatDate(v.createdAt)}</p>
                   </div>
                   <div className="flex gap-2">
-                    <button
-                      onClick={() => handleVendorAction(v.id, 'approve')}
+                    <button onClick={() => handleVendorAction(v.id, 'approve')}
                       disabled={approvingId === v.id}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-green-600 text-white text-xs font-bold rounded-lg hover:bg-green-700 disabled:opacity-60 transition-colors"
-                    >
+                      className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-green-600 text-white text-xs font-bold rounded-lg hover:bg-green-700 disabled:opacity-60 transition-colors">
                       <CheckCircle className="w-3.5 h-3.5" />
-                      {approvingId === v.id ? '...' : 'Approve'}
+                      {approvingId === v.id ? '…' : 'Approve'}
                     </button>
-                    <button
-                      onClick={() => handleVendorAction(v.id, 'reject')}
+                    <button onClick={() => handleVendorAction(v.id, 'reject')}
                       disabled={approvingId === v.id}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-gray-100 text-gray-700 text-xs font-bold rounded-lg hover:bg-red-50 hover:text-red-700 disabled:opacity-60 transition-colors"
-                    >
-                      <XCircle className="w-3.5 h-3.5" />
-                      Reject
+                      className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-gray-100 text-gray-700 text-xs font-bold rounded-lg hover:bg-red-50 hover:text-red-700 disabled:opacity-60 transition-colors">
+                      <XCircle className="w-3.5 h-3.5" /> Reject
                     </button>
                   </div>
                 </div>
@@ -287,6 +408,25 @@ export default function AdminDashboard() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* ── Quick Reports ─────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {[
+          { href: '/admin/payouts', label: 'Payout Report', sub: 'Vendor earnings & payouts', icon: <DollarSign className="w-4 h-4" />, color: 'bg-green-50 border-green-100 text-green-700' },
+          { href: '/admin/orders', label: 'Orders Report', sub: 'Order history & status', icon: <ShoppingBag className="w-4 h-4" />, color: 'bg-blue-50 border-blue-100 text-blue-700' },
+          { href: '/admin/invoices', label: 'Invoice Report', sub: 'Billing & revenue data', icon: <BarChart2 className="w-4 h-4" />, color: 'bg-purple-50 border-purple-100 text-purple-700' },
+        ].map(r => (
+          <Link key={r.href} href={r.href}
+            className={`flex items-center gap-3 p-4 rounded-2xl border hover:shadow-sm transition-all ${r.color}`}>
+            <div className="w-9 h-9 rounded-xl bg-white/70 flex items-center justify-center">{r.icon}</div>
+            <div>
+              <p className="font-bold text-sm">{r.label}</p>
+              <p className="text-xs opacity-70">{r.sub}</p>
+            </div>
+            <ArrowUpRight className="w-4 h-4 ml-auto opacity-60" />
+          </Link>
+        ))}
       </div>
     </div>
   );

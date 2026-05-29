@@ -10,12 +10,12 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<'7d' | '30d' | '90d' | '1y'>('30d');
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (p = period) => {
     setLoading(true);
     try {
       const [orders, invoices, users, products] = await Promise.all([
-        api.get('/orders/stats').catch(() => ({ data: { data: null } })),
-        api.get('/invoices/stats').catch(() => ({ data: { data: null } })),
+        api.get('/orders/stats', { params: { period: p } }).catch(() => ({ data: { data: null } })),
+        api.get('/invoices/stats', { params: { period: p } }).catch(() => ({ data: { data: null } })),
         api.get('/users/stats').catch(() => ({ data: { data: null } })),
         api.get('/products/stats').catch(() => ({ data: { data: null } })),
       ]);
@@ -26,7 +26,7 @@ export default function ReportsPage() {
         products: products.data.data,
       });
     } finally { setLoading(false); }
-  }, []);
+  }, [period]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -62,10 +62,10 @@ export default function ReportsPage() {
         <div className="flex items-center gap-2">
           <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
             {(['7d', '30d', '90d', '1y'] as const).map(p => (
-              <button key={p} onClick={() => setPeriod(p)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${period === p ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}>{p}</button>
+              <button key={p} onClick={() => { setPeriod(p); load(p); }} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${period === p ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}>{p}</button>
             ))}
           </div>
-          <button onClick={load} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 border border-gray-200 rounded-xl px-3 py-2">
+          <button onClick={() => load()} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 border border-gray-200 rounded-xl px-3 py-2">
             <RefreshCw className="w-4 h-4" />
           </button>
         </div>
@@ -84,15 +84,15 @@ export default function ReportsPage() {
               <StatCard
                 label="Total Revenue" value={formatPrice(invoices?.totalRevenue ?? 0)}
                 icon={<DollarSign className="w-5 h-5 text-green-600" />} color="bg-green-50"
-                sub={`${invoices?.totalInvoices ?? 0} invoices`}
+                sub={`${invoices?.total ?? 0} invoices`}
               />
               <StatCard
-                label="Platform Earnings" value={formatPrice(invoices?.platformEarnings ?? 0)}
+                label="Platform Earnings" value={formatPrice(invoices?.totalAdminEarnings ?? invoices?.platformEarnings ?? 0)}
                 icon={<TrendingUp className="w-5 h-5 text-violet-600" />} color="bg-violet-50"
                 sub="After vendor payouts"
               />
               <StatCard
-                label="Vendor Payouts" value={formatPrice(invoices?.vendorPayouts ?? 0)}
+                label="Vendor Payouts" value={formatPrice(invoices?.totalVendorEarnings ?? invoices?.vendorPayouts ?? 0)}
                 icon={<DollarSign className="w-5 h-5 text-blue-600" />} color="bg-blue-50"
                 sub="Paid to vendors"
               />
@@ -108,15 +108,15 @@ export default function ReportsPage() {
             <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">Orders</h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <StatCard
-                label="Total Orders" value={orders?.total ?? '—'}
+                label="Total Orders" value={orders?.totalOrders ?? orders?.total ?? '—'}
                 icon={<ShoppingBag className="w-5 h-5 text-orange-500" />} color="bg-orange-50"
               />
               <StatCard
-                label="Pending" value={orders?.pending ?? '—'}
+                label="Pending" value={orders?.pendingOrders ?? orders?.pending ?? '—'}
                 icon={<ShoppingBag className="w-5 h-5 text-yellow-500" />} color="bg-yellow-50"
               />
               <StatCard
-                label="Delivered" value={orders?.delivered ?? '—'}
+                label="Delivered" value={orders?.deliveredOrders ?? orders?.delivered ?? '—'}
                 icon={<ShoppingBag className="w-5 h-5 text-green-500" />} color="bg-green-50"
               />
               <StatCard
@@ -134,6 +134,7 @@ export default function ReportsPage() {
                 <StatCard
                   label="Total Users" value={users?.total ?? '—'}
                   icon={<Users className="w-5 h-5 text-blue-500" />} color="bg-blue-50"
+                  sub={users ? `${users.customers ?? 0} customers · ${users.vendors ?? 0} vendors` : undefined}
                 />
                 <StatCard
                   label="New This Month" value={users?.newThisMonth ?? '—'}

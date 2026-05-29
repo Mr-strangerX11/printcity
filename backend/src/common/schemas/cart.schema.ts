@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class Cart extends Document {
   @Prop({ required: true })
   userId: string;
@@ -18,7 +18,7 @@ export class Cart extends Document {
 
 export const CartSchema = SchemaFactory.createForClass(Cart);
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class CartItem extends Document {
   @Prop({ required: true })
   cartId: string;

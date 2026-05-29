@@ -9,11 +9,11 @@ async function main() {
   // ─── Admin ────────────────────────────────────────────────
   const adminPassword = await bcrypt.hash('Admin@123', 12);
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@ap.com' },
+    where: { email: 'admin@PrintCity.com' },
     update: {},
     create: {
-      name: 'AP Admin',
-      email: 'admin@ap.com',
+      name: 'PrintCity Admin',
+      email: 'admin@PrintCity.com',
       passwordHash: adminPassword,
       role: Role.ADMIN,
     },
@@ -54,11 +54,11 @@ async function main() {
   const vendorPassword = await bcrypt.hash('Vendor@123', 12);
 
   const vendor1User = await prisma.user.upsert({
-    where: { email: 'vendor1@ap.com' },
+    where: { email: 'vendor1@PrintCity.com' },
     update: {},
     create: {
       name: 'Alex Design Studio',
-      email: 'vendor1@ap.com',
+      email: 'vendor1@PrintCity.com',
       passwordHash: vendorPassword,
       role: Role.VENDOR,
     },
@@ -78,11 +78,11 @@ async function main() {
   });
 
   const vendor2User = await prisma.user.upsert({
-    where: { email: 'vendor2@ap.com' },
+    where: { email: 'vendor2@PrintCity.com' },
     update: {},
     create: {
       name: 'PrintPop Creative',
-      email: 'vendor2@ap.com',
+      email: 'vendor2@PrintCity.com',
       passwordHash: vendorPassword,
       role: Role.VENDOR,
     },
@@ -105,11 +105,11 @@ async function main() {
   // ─── Customer ─────────────────────────────────────────────
   const customerPassword = await bcrypt.hash('Customer@123', 12);
   await prisma.user.upsert({
-    where: { email: 'customer@ap.com' },
+    where: { email: 'customer@PrintCity.com' },
     update: {},
     create: {
       name: 'Jane Customer',
-      email: 'customer@ap.com',
+      email: 'customer@PrintCity.com',
       passwordHash: customerPassword,
       role: Role.CUSTOMER,
     },
@@ -284,10 +284,10 @@ async function main() {
   console.log('🎉 Seed complete!');
   console.log('');
   console.log('Login credentials:');
-  console.log('  Admin:    admin@ap.com    / Admin@123');
-  console.log('  Vendor 1: vendor1@ap.com  / Vendor@123');
-  console.log('  Vendor 2: vendor2@ap.com  / Vendor@123');
-  console.log('  Customer: customer@ap.com / Customer@123');
+  console.log('  Admin:    admin@PrintCity.com    / Admin@123');
+  console.log('  Vendor 1: vendor1@PrintCity.com  / Vendor@123');
+  console.log('  Vendor 2: vendor2@PrintCity.com  / Vendor@123');
+  console.log('  Customer: customer@PrintCity.com / Customer@123');
   console.log('─────────────────────────────────────');
 }
 

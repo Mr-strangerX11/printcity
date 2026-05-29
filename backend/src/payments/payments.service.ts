@@ -187,8 +187,25 @@ export class PaymentsService {
     const merchantCode = this.config.get<string>('ESEWA_MERCHANT_CODE')!;
     const secretKey = this.config.get<string>('ESEWA_SECRET_KEY')!;
 
-    const fields = (signed_field_names ?? 'transaction_code,status,total_amount,transaction_uuid,product_code,signed_field_names').split(',');
-    const message = fields.map((f) => `${f}=${payload[f] ?? ''}`).join(',');
+    // SECURITY: Never trust signed_field_names from the payload — it is attacker-controlled.
+    // Always verify the HMAC over a server-defined canonical set of required fields.
+    const REQUIRED_SIGNED_FIELDS = [
+      'transaction_code',
+      'status',
+      'total_amount',
+      'transaction_uuid',
+      'product_code',
+      'signed_field_names',
+    ] as const;
+
+    // Verify that all required fields are present in the payload
+    const missing = REQUIRED_SIGNED_FIELDS.filter(f => !payload[f]);
+    if (missing.length > 0) {
+      throw new BadRequestException(`eSewa response missing required fields: ${missing.join(', ')}`);
+    }
+
+    // Compute HMAC over the canonical field list (not the user-supplied one)
+    const message = REQUIRED_SIGNED_FIELDS.map((f) => `${f}=${payload[f]}`).join(',');
     const expected = createHmac('sha256', secretKey).update(message).digest('base64');
 
     if (expected !== signature) {

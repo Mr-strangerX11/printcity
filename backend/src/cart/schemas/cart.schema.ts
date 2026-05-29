@@ -3,7 +3,7 @@ import { Document, Types } from 'mongoose';
 
 export type CartDocument = Cart & Document;
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class Cart {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true, unique: true }) userId: Types.ObjectId;
 }

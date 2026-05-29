@@ -9,7 +9,6 @@ import { useAuth } from '@/context/AuthContext';
 import { Navbar } from '@/components/layout/Navbar';
 import { toast } from 'sonner';
 import { getErrorMsg } from '@/lib/utils';
-import Cookies from 'js-cookie';
 
 function VerifyEmailContent() {
   const router = useRouter();
@@ -60,9 +59,8 @@ function VerifyEmailContent() {
     if (code.length < 6) { toast.error('Enter the 6-digit code'); return; }
     setLoading(true);
     try {
-      const res = await authApi.verifyOtp(email, code);
-      const { accessToken, refreshToken } = res.data.data;
-      await login(accessToken, refreshToken);
+      await authApi.verifyOtp(email, code);
+      await login();
       toast.success('Email verified! Welcome to Print City.');
       router.push('/dashboard');
     } catch (err: any) {

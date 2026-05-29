@@ -59,6 +59,18 @@ export interface ProductImage {
   altText?: string;
 }
 
+export interface PrintArea {
+  x: number; y: number; width: number; height: number;
+}
+
+export interface MockupImage {
+  color: string;
+  hex: string;
+  front: string;
+  back?: string;
+  sleeve?: string;
+}
+
 export interface Product {
   id: string;
   vendorId: string;
@@ -70,6 +82,11 @@ export interface Product {
   status: ProductStatus;
   tags: string[];
   createdAt: string;
+  // Web-to-print fields
+  customizable?: boolean;
+  printAreas?: { front?: PrintArea; back?: PrintArea; sleeve?: PrintArea };
+  mockupImages?: MockupImage[];
+  availablePrintMethods?: string[];
   vendor?: Pick<Vendor, 'storeName' | 'storeSlug' | 'logo' | 'description'>;
   category?: Pick<Category, 'name' | 'slug'>;
   variants?: ProductVariant[];
@@ -134,13 +151,27 @@ export interface Payment {
 export interface CustomDesignOrder {
   id: string;
   productType: string;
+  productTitle?: string;
   designUrl: string;
+  previewUrl?: string;
+  designUrls?: string[];
+  canvasJson?: string;
+  printMethod?: string;
+  printSides?: string[];
   notes?: string;
+  adminNotes?: string;
   status: CustomOrderStatus;
   price?: number;
   size?: string;
   color?: string;
   qty: number;
+  pricingBreakdown?: {
+    basePrice: number;
+    printCost: number;
+    setupCost: number;
+    discount: number;
+    total: number;
+  };
   createdAt: string;
   user?: Pick<User, 'name' | 'email'>;
 }

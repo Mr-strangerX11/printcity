@@ -2,10 +2,11 @@
 
 export const dynamic = 'force-dynamic';
 
-import React, { Suspense, useEffect, useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { CheckCircle, XCircle, DollarSign, Plus, X, Loader2 } from 'lucide-react';
 import { vendorsApi, authApi } from '@/lib/api';
+import { useVendors } from '@/hooks';
 import { formatDate, getErrorMsg } from '@/lib/utils';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { toast } from 'sonner';
@@ -15,24 +16,18 @@ const emptyVendorForm = { name: '', email: '', password: '', storeName: '' };
 function AdminVendorsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [vendors, setVendors] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const status = searchParams.get('status') ?? '';
+  const { data: vendors = [], loading, refetch } = useVendors({ status: status || undefined });
   const [editingCommission, setEditingCommission] = useState<{ id: string; rate: number } | null>(null);
   const [showAddVendor, setShowAddVendor] = useState(false);
   const [vendorForm, setVendorForm] = useState({ ...emptyVendorForm });
   const [creating, setCreating] = useState(false);
-  const status = searchParams.get('status') ?? '';
-
-  const load = () => {
-    vendorsApi.list({ status: status || undefined }).then(({ data }) => setVendors(data.data ?? [])).finally(() => setLoading(false));
-  };
-  useEffect(() => { load(); }, [status]);
 
   const approve = async (id: string) => {
     try {
       await vendorsApi.updateStatus(id, 'ACTIVE');
       toast.success('Vendor approved!');
-      load();
+      refetch();
     } catch { toast.error('Failed'); }
   };
 
@@ -40,7 +35,7 @@ function AdminVendorsContent() {
     try {
       await vendorsApi.updateStatus(id, 'SUSPENDED');
       toast.success('Vendor suspended');
-      load();
+      refetch();
     } catch { toast.error('Failed'); }
   };
 
@@ -49,7 +44,7 @@ function AdminVendorsContent() {
       await vendorsApi.updateCommission(id, rate / 100);
       toast.success('Commission updated');
       setEditingCommission(null);
-      load();
+      refetch();
     } catch { toast.error('Failed'); }
   };
 
@@ -63,7 +58,7 @@ function AdminVendorsContent() {
       toast.success('Vendor account created!');
       setShowAddVendor(false);
       setVendorForm({ ...emptyVendorForm });
-      load();
+      refetch();
     } catch (err: any) {
       toast.error(getErrorMsg(err, 'Failed to create vendor'));
     } finally { setCreating(false); }

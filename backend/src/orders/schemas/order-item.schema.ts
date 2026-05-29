@@ -3,7 +3,7 @@ import { Document, Types } from 'mongoose';
 
 export type OrderItemDocument = OrderItem & Document;
 
-@Schema({ timestamps: true })
+@Schema({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class OrderItem {
   @Prop({ type: Types.ObjectId, ref: 'Order', required: true }) orderId: Types.ObjectId;
   @Prop({ type: Types.ObjectId, ref: 'Product', required: true }) productId: Types.ObjectId;
@@ -16,3 +16,6 @@ export class OrderItem {
 }
 
 export const OrderItemSchema = SchemaFactory.createForClass(OrderItem);
+
+OrderItemSchema.index({ orderId: 1 });
+OrderItemSchema.index({ vendorId: 1 });

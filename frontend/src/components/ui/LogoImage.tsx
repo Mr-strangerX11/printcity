@@ -16,14 +16,14 @@ export function LogoImage({ className = '', width = 120, height = 48, fallbackCl
 
   if (error) {
     return (
-      <span className={`font-black tracking-tight ${fallbackClassName}`}>AP</span>
+      <span className={`font-black tracking-tight ${fallbackClassName}`}>PRINT CITY</span>
     );
   }
 
   return (
     <Image
       src="/logo.png"
-      alt="AP – Design. Print. Deliver."
+      alt="Print City – Print. Design. Deliver."
       width={width}
       height={height}
       className={className}

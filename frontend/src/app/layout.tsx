@@ -15,7 +15,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: { default: 'AP — Custom Print Marketplace', template: '%s | AP' },
+  title: { default: 'PrintCity — Custom Print Marketplace', template: '%s | PrintCity' },
   description: 'Design. Print. Deliver. Premium custom prints from top vendors.',
   keywords: ['custom print', 't-shirts', 'hoodies', 'mugs', 'print on demand'],
 };

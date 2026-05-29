@@ -3,7 +3,7 @@ import { Document, Types } from 'mongoose';
 
 export type ReviewDocument = Review & Document;
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class Review {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true }) userId: Types.ObjectId;
   @Prop({ type: Types.ObjectId, ref: 'Product', required: true }) productId: Types.ObjectId;

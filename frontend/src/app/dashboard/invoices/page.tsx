@@ -10,7 +10,6 @@ import { Invoice, InvoiceStatus } from '@/types';
 import { formatPrice, formatDate } from '@/lib/utils';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { FileText, Download, Search, ChevronLeft, ChevronRight } from 'lucide-react';
-import Cookies from 'js-cookie';
 
 const STATUSES: InvoiceStatus[] = ['ISSUED', 'PAID', 'CANCELLED', 'REFUNDED'];
 
@@ -57,15 +56,20 @@ function CustomerInvoicesContent() {
     router.push(`/dashboard/invoices?${params.toString()}`);
   };
 
-  const handleDownload = (invoiceId: string, invoiceNumber: string) => {
-    const token = Cookies.get('accessToken');
-    const url = invoicesApi.downloadUrl(invoiceId);
+  const handleDownload = async (invoiceId: string, invoiceNumber: string) => {
+    const res = await fetch(`/api/invoices/${invoiceId}/download`, {
+      credentials: 'include',
+    });
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = `${url}${token ? `?token=${token}` : ''}`;
+    a.href = url;
     a.download = `${invoiceNumber}.pdf`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   return (

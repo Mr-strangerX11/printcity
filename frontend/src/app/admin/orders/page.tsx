@@ -2,11 +2,11 @@
 
 export const dynamic = 'force-dynamic';
 
-import React, { Suspense, useEffect, useState, useCallback } from 'react';
+import React, { Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { ordersApi } from '@/lib/api';
-import { Order, OrderStatus } from '@/types';
+import { useOrders } from '@/hooks';
+import { OrderStatus } from '@/types';
 import { formatPrice, formatDate } from '@/lib/utils';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 
@@ -15,22 +15,12 @@ const STATUSES: OrderStatus[] = ['PENDING','CONFIRMED','PRINTING','PACKED','SHIP
 function AdminOrdersContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
   const status = searchParams.get('status') ?? '';
   const page = Number(searchParams.get('page') ?? 1);
 
-  const fetchOrders = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { data } = await ordersApi.list({ status: status || undefined, page, limit: 20 });
-      setOrders(data.data.items ?? []);
-      setTotal(data.data.meta.total ?? 0);
-    } finally { setLoading(false); }
-  }, [status, page]);
-
-  useEffect(() => { fetchOrders(); }, [fetchOrders]);
+  const { data, loading } = useOrders({ status: status || undefined, page, limit: 20 });
+  const orders = data?.items ?? [];
+  const total = data?.meta.total ?? 0;
 
   const setStatus = (s: string) => {
     const p = new URLSearchParams();

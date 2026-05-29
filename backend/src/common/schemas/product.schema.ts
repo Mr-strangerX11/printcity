@@ -8,7 +8,7 @@ export enum ProductStatus {
   ARCHIVED = 'ARCHIVED',
 }
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class Product extends Document {
   @Prop({ required: true })
   title: string;

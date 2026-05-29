@@ -37,7 +37,7 @@ export function DashboardShell({ children, title, navItems }: DashboardShellProp
         {/* Logo */}
         <div className="h-16 flex items-center justify-between px-6" style={{ borderBottom: '1px solid var(--border-color)' }}>
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-brand-gradient flex items-center justify-center text-white font-bold text-sm">AP</div>
+            <div className="w-8 h-8 rounded-lg bg-brand-gradient flex items-center justify-center text-white font-bold text-sm">PC</div>
             <span className="font-bold text-lg" style={{ color: 'var(--text-heading)' }}>{title}</span>
           </Link>
           <ThemeToggle />
@@ -100,7 +100,7 @@ export function DashboardShell({ children, title, navItems }: DashboardShellProp
               <Menu className="w-5 h-5" style={{ color: 'var(--text-body)' }} />
             </button>
             <Link href="/" className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-brand-gradient flex items-center justify-center text-white font-bold text-xs">AP</div>
+              <div className="w-7 h-7 rounded-lg bg-brand-gradient flex items-center justify-center text-white font-bold text-xs">PC</div>
               <span className="font-bold" style={{ color: 'var(--text-heading)' }}>{title}</span>
             </Link>
           </div>

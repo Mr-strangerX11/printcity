@@ -3,7 +3,7 @@ import { Document, Types } from 'mongoose';
 
 export type AddressDocument = Address & Document;
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class Address {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true }) userId: Types.ObjectId;
   @Prop({ default: 'Home' }) label: string;

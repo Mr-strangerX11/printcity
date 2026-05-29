@@ -82,7 +82,7 @@ export function Footer() {
       {/* Bottom bar */}
       <div style={{ borderTop: '1px solid var(--border-subtle)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 pb-24 md:pb-5 flex flex-col sm:flex-row justify-between items-center gap-3">
-          <p className="text-xs" style={{ color: 'var(--text-faint)' }}>© {YEAR} AP Marketplace. All rights reserved.</p>
+          <p className="text-xs" style={{ color: 'var(--text-faint)' }}>© {YEAR} PrintCity Marketplace. All rights reserved.</p>
           <div className="flex items-center gap-6">
             {[
               { href: '/privacy', label: 'Privacy Policy' },

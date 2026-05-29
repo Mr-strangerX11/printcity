@@ -4,6 +4,7 @@ import {
   ConflictException,
   BadRequestException,
   NotFoundException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -39,18 +40,37 @@ export class AuthService {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    const user = await this.users.create({
-      name: dto.name,
-      email: dto.email,
-      passwordHash,
-      phone: dto.phone,
-      role: dto.role ?? Role.CUSTOMER,
-      isVerified: false,
-      verificationOtp: otp,
-      verificationOtpExpiry: otpExpiry,
-    } as any);
+    let user: Awaited<ReturnType<typeof this.users.create>>;
+    try {
+      user = await this.users.create({
+        name: dto.name,
+        email: dto.email,
+        passwordHash,
+        phone: dto.phone,
+        role: dto.role ?? Role.CUSTOMER,
+        isVerified: false,
+        verificationOtp: otp,
+        verificationOtpExpiry: otpExpiry,
+      } as any);
+    } catch (err: any) {
+      // MongoDB duplicate key (race condition between findByEmail and create)
+      if (err?.code === 11000 || err?.name === 'MongoServerError') {
+        throw new ConflictException('Email already registered');
+      }
+      throw new InternalServerErrorException(
+        err?.message ?? 'Registration failed. Please try again.',
+      );
+    }
 
-    await this.mail.sendVerificationOtp(user.email, user.name, otp);
+    try {
+      await this.mail.sendVerificationOtp(user.email, user.name, otp);
+    } catch (err: any) {
+      // Account was created but email failed — delete the user so they can retry
+      await this.users.delete(user.id).catch(() => {});
+      throw new InternalServerErrorException(
+        'Account created but verification email could not be sent. Please check your email address or try again later.',
+      );
+    }
 
     return { requiresVerification: true, email: user.email };
   }
@@ -70,10 +90,10 @@ export class AuthService {
     return this.generateTokens(user.id, user.email, user.role);
   }
 
-  async refresh(refreshToken: string) {
-    if (!refreshToken) throw new UnauthorizedException('Refresh token required');
+  async refresh(refreshTokenFromCookie: string) {
+    if (!refreshTokenFromCookie) throw new UnauthorizedException('Refresh token required');
     try {
-      const payload = this.jwt.verify<{ sub: string }>(refreshToken, {
+      const payload = this.jwt.verify<{ sub: string }>(refreshTokenFromCookie, {
         secret: this.config.get<string>('JWT_REFRESH_SECRET'),
       });
       const user = await this.users.findById(payload.sub);
@@ -118,16 +138,24 @@ export class AuthService {
     return this.users.update(userId, data);
   }
 
-  async listUsers(query: { page?: number; role?: string; search?: string }) {
-    // Pagination and filtering logic should be refactored for Mongoose
-    const users = await this.users.findAll();
-    return { items: users, total: users.length, page: 1, totalPages: 1 };
+  async listUsers(query: { page?: number; limit?: number; role?: string; search?: string }) {
+    return this.users.findAllPaginated(query);
   }
 
   async toggleUserStatus(userId: string, isActive: boolean) {
     const user = await this.users.findById(userId);
-    if (!user) throw new Error('User not found');
+    if (!user) throw new NotFoundException('User not found');
     return this.users.update(userId, { isActive });
+  }
+
+  async deleteUser(userId: string) {
+    const user = await this.users.findById(userId);
+    if (!user) throw new NotFoundException('User not found');
+    if (user.role === Role.ADMIN) {
+      throw new BadRequestException('Admin accounts cannot be deleted');
+    }
+    await this.users.delete(userId);
+    return { message: 'User deleted successfully' };
   }
 
   async handleGoogleLogin(googleUser: {
@@ -194,7 +222,7 @@ export class AuthService {
     return { message: 'Vendor created successfully', userId: user.id };
   }
 
-  private generateTokens(userId: string, email: string, role: string) {
+  generateTokens(userId: string, email: string, role: string) {
     const payload = { sub: userId, email, role };
     const accessToken = this.jwt.sign(payload, {
       secret: this.config.get('JWT_ACCESS_SECRET'),

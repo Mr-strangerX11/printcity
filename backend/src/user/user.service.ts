@@ -36,4 +36,39 @@ export class UserService {
     const result = await this.userModel.findByIdAndDelete(id).exec();
     if (!result) throw new NotFoundException('User not found');
   }
+
+  async getStats() {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const [total, newThisMonth, customers, vendors, admins] = await Promise.all([
+      this.userModel.countDocuments(),
+      this.userModel.countDocuments({ createdAt: { $gte: startOfMonth } }),
+      this.userModel.countDocuments({ role: 'CUSTOMER' }),
+      this.userModel.countDocuments({ role: 'VENDOR' }),
+      this.userModel.countDocuments({ role: 'ADMIN' }),
+    ]);
+    return { total, newThisMonth, customers, vendors, admins };
+  }
+
+  async findAllPaginated(query: { page?: number; limit?: number; search?: string; role?: string }) {
+    const page = Number(query.page) || 1;
+    const limit = Math.min(Number(query.limit) || 20, 100);
+    const skip = (page - 1) * limit;
+
+    const filter: any = {};
+    if (query.role && query.role !== 'ALL') filter.role = query.role;
+    if (query.search?.trim()) {
+      filter.$or = [
+        { name: { $regex: query.search.trim(), $options: 'i' } },
+        { email: { $regex: query.search.trim(), $options: 'i' } },
+      ];
+    }
+
+    const [items, total] = await Promise.all([
+      this.userModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean().exec(),
+      this.userModel.countDocuments(filter),
+    ]);
+
+    return { items, total, page, totalPages: Math.ceil(total / limit) };
+  }
 }

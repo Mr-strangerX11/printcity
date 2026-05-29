@@ -7,12 +7,12 @@ export class PdfService {
   async generateInvoicePdf(invoice: any): Promise<Buffer> {
     try {
       // Dynamic import so the app boots even if puppeteer isn't installed
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const puppeteer = await (eval('import("puppeteer")') as Promise<any>).catch(() => null);
+      const puppeteer = await import('puppeteer').catch(() => null);
       if (!puppeteer) {
         throw new Error('puppeteer is not installed. Run: npm install puppeteer');
       }
-      const browser = await puppeteer.default.launch({
+      const launcher = puppeteer.default ?? puppeteer;
+      const browser = await launcher.launch({
         headless: true,
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
       });

@@ -3,7 +3,7 @@ import { Document, Types } from 'mongoose';
 
 export type CategoryDocument = Category & Document;
 
-@Schema({ timestamps: true })
+@Schema({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class Category {
   @Prop({ required: true }) name: string;
   @Prop({ required: true, unique: true }) slug: string;

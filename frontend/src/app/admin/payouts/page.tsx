@@ -1,16 +1,16 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { payoutsApi } from '@/lib/api';
-import { Payout } from '@/types';
 import { formatPrice, formatDate } from '@/lib/utils';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { usePayouts } from '@/hooks';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function AdminPayoutsPage() {
-  const [payouts, setPayouts] = useState<Payout[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, loading, refetch } = usePayouts();
+  const payouts = data?.items ?? [];
   const [running, setRunning] = useState(false);
   const [periodStart, setPeriodStart] = useState(() => {
     const d = new Date();
@@ -19,18 +19,12 @@ export default function AdminPayoutsPage() {
   });
   const [periodEnd, setPeriodEnd] = useState(() => new Date().toISOString().split('T')[0]);
 
-  const load = () => {
-    setLoading(true);
-    payoutsApi.list().then(({ data }) => setPayouts(data.data.items ?? [])).finally(() => setLoading(false));
-  };
-  useEffect(() => { load(); }, []);
-
   const runPayouts = async () => {
     setRunning(true);
     try {
       const { data } = await payoutsApi.run({ periodStart, periodEnd });
       toast.success(`${data.data.created} payout(s) created`);
-      load();
+      refetch();
     } catch { toast.error('Failed to run payouts'); }
     finally { setRunning(false); }
   };
@@ -39,7 +33,7 @@ export default function AdminPayoutsPage() {
     try {
       await payoutsApi.markPaid(id);
       toast.success('Payout marked as paid');
-      load();
+      refetch();
     } catch { toast.error('Failed'); }
   };
 

@@ -8,10 +8,9 @@ import { Invoice, InvoiceStatus } from '@/types';
 import { formatPrice, formatDate } from '@/lib/utils';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import {
-  ArrowLeft, Download, FileText, Package, MapPin, CreditCard,
-  Users, TrendingUp, Store, CheckCircle2,
+  ArrowLeft, Download, Package, MapPin, CreditCard,
+  Users, Store,
 } from 'lucide-react';
-import Cookies from 'js-cookie';
 
 const STATUS_OPTIONS: InvoiceStatus[] = ['ISSUED', 'PAID', 'CANCELLED', 'REFUNDED'];
 
@@ -34,9 +33,8 @@ export default function AdminInvoiceDetailPage() {
     if (!invoice || downloading) return;
     setDownloading(true);
     try {
-      const token = Cookies.get('accessToken');
       const res = await fetch(`/api/invoices/${invoice.id}/download`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include',
       });
       if (!res.ok) throw new Error('Failed');
       const blob = await res.blob();
@@ -216,6 +214,7 @@ export default function AdminInvoiceDetailPage() {
             <div key={item.id} className="grid grid-cols-1 sm:grid-cols-[1fr_60px_110px_110px_110px_110px] gap-2 sm:gap-4 items-center px-6 py-4">
               <div className="flex items-center gap-3">
                 {item.productImageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img src={item.productImageUrl} alt={item.productName} className="w-10 h-10 rounded-lg object-cover border border-gray-100 flex-shrink-0" />
                 ) : (
                   <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">

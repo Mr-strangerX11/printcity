@@ -8,7 +8,7 @@ export enum VendorStatus {
   REJECTED = 'REJECTED',
 }
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class Vendor extends Document {
   @Prop({ required: true })
   userId: string;

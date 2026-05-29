@@ -6,16 +6,13 @@ import { invoicesApi } from '@/lib/api';
 import { Invoice } from '@/types';
 import { formatPrice, formatDate } from '@/lib/utils';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import { useAuth } from '@/context/AuthContext';
 import {
-  ArrowLeft, Download, FileText, Package, Store, TrendingUp, DollarSign,
+  ArrowLeft, Download, Package, Store, TrendingUp, DollarSign,
 } from 'lucide-react';
-import Cookies from 'js-cookie';
 
 export default function VendorInvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { user } = useAuth();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
@@ -31,9 +28,8 @@ export default function VendorInvoiceDetailPage() {
     if (!invoice || downloading) return;
     setDownloading(true);
     try {
-      const token = Cookies.get('accessToken');
       const res = await fetch(`/api/invoices/${invoice.id}/download`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include',
       });
       if (!res.ok) throw new Error('Failed');
       const blob = await res.blob();
@@ -164,6 +160,7 @@ export default function VendorInvoiceDetailPage() {
             <div key={item.id} className="grid grid-cols-1 sm:grid-cols-[1fr_60px_110px_110px_110px] gap-2 sm:gap-4 items-center px-6 py-4">
               <div className="flex items-center gap-3">
                 {item.productImageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img src={item.productImageUrl} alt={item.productName} className="w-11 h-11 rounded-xl object-cover border border-gray-100 flex-shrink-0" />
                 ) : (
                   <div className="w-11 h-11 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">

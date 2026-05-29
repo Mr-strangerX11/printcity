@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { formatDate } from '@/lib/utils';
 import {
   Search, RefreshCw, UserCheck, UserX, Shield,
-  Store, ShoppingBag, ChevronLeft, ChevronRight, Users,
+  Store, ShoppingBag, ChevronLeft, ChevronRight, Users, Trash2, AlertTriangle,
 } from 'lucide-react';
 
 const ROLES = ['ALL', 'CUSTOMER', 'VENDOR', 'ADMIN'];
@@ -32,6 +32,8 @@ export default function AdminUsersPage() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('ALL');
   const [toggling, setToggling] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<any | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async (p = page, s = search, r = roleFilter) => {
     setLoading(true);
@@ -71,10 +73,11 @@ export default function AdminUsersPage() {
   };
 
   const toggleStatus = async (user: any) => {
-    setToggling(user.id);
+    const uid = user._id ?? user.id;
+    setToggling(uid);
     try {
-      await adminApi.toggleUserStatus(user.id, !user.isActive);
-      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, isActive: !u.isActive } : u));
+      await adminApi.toggleUserStatus(uid, !user.isActive);
+      setUsers(prev => prev.map(u => (u._id ?? u.id) === uid ? { ...u, isActive: !u.isActive } : u));
       toast.success(`${user.name} ${user.isActive ? 'deactivated' : 'activated'}`);
     } catch {
       toast.error('Failed to update user status');
@@ -83,7 +86,25 @@ export default function AdminUsersPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!confirmDelete) return;
+    const uid = confirmDelete._id ?? confirmDelete.id;
+    setDeleting(true);
+    try {
+      await adminApi.deleteUser(uid);
+      setUsers(prev => prev.filter(u => (u._id ?? u.id) !== uid));
+      setTotal(prev => prev - 1);
+      toast.success(`${confirmDelete.name} has been deleted`);
+      setConfirmDelete(null);
+    } catch {
+      toast.error('Failed to delete user');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
+    <>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -145,7 +166,7 @@ export default function AdminUsersPage() {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {users.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
+                  <tr key={user._id ?? user.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-brand-gradient flex items-center justify-center text-white text-sm font-black flex-shrink-0">
@@ -181,20 +202,28 @@ export default function AdminUsersPage() {
                     </td>
                     <td className="px-5 py-4 text-right">
                       {user.role !== 'ADMIN' && (
-                        <button
-                          onClick={() => toggleStatus(user)}
-                          disabled={toggling === user.id}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all disabled:opacity-50 ${
-                            user.isActive
-                              ? 'bg-red-50 text-red-600 hover:bg-red-100'
-                              : 'bg-green-50 text-green-600 hover:bg-green-100'
-                          }`}
-                        >
-                          {user.isActive
-                            ? <><UserX className="w-3.5 h-3.5" /> Deactivate</>
-                            : <><UserCheck className="w-3.5 h-3.5" /> Activate</>
-                          }
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => toggleStatus(user)}
+                            disabled={toggling === (user._id ?? user.id)}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all disabled:opacity-50 ${
+                              user.isActive
+                                ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                                : 'bg-green-50 text-green-600 hover:bg-green-100'
+                            }`}
+                          >
+                            {user.isActive
+                              ? <><UserX className="w-3.5 h-3.5" /> Deactivate</>
+                              : <><UserCheck className="w-3.5 h-3.5" /> Activate</>
+                            }
+                          </button>
+                          <button
+                            onClick={() => setConfirmDelete(user)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-red-50 text-red-600 hover:bg-red-100 transition-all"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> Delete
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -234,5 +263,52 @@ export default function AdminUsersPage() {
         )}
       </div>
     </div>
+
+    {/* Delete confirmation modal */}
+    {confirmDelete && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+              <AlertTriangle className="w-5 h-5 text-red-600" />
+            </div>
+            <div>
+              <h3 className="font-black text-gray-900">Delete User</h3>
+              <p className="text-xs text-gray-500">This action cannot be undone</p>
+            </div>
+          </div>
+
+          <p className="text-sm text-gray-600 mb-6">
+            Are you sure you want to permanently delete{' '}
+            <span className="font-bold text-gray-900">{confirmDelete.name}</span>
+            {' '}({confirmDelete.email})?
+            All their data will be removed.
+          </p>
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => setConfirmDelete(null)}
+              disabled={deleting}
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {deleting ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <Trash2 className="w-4 h-4" />
+              )}
+              {deleting ? 'Deleting…' : 'Delete User'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

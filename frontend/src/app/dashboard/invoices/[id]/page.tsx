@@ -1,14 +1,13 @@
 'use client';
+/* eslint-disable @next/next/no-img-element */
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { invoicesApi } from '@/lib/api';
 import { Invoice } from '@/types';
 import { formatPrice, formatDate } from '@/lib/utils';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import { ArrowLeft, Download, FileText, Package, MapPin, CreditCard, Printer } from 'lucide-react';
-import Cookies from 'js-cookie';
+import { ArrowLeft, Download, FileText, Package, MapPin, CreditCard } from 'lucide-react';
 
 export default function CustomerInvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -28,9 +27,8 @@ export default function CustomerInvoiceDetailPage() {
     if (!invoice || downloading) return;
     setDownloading(true);
     try {
-      const token = Cookies.get('accessToken');
       const res = await fetch(`/api/invoices/${invoice.id}/download`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include',
       });
       if (!res.ok) throw new Error('Failed to download');
       const blob = await res.blob();

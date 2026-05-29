@@ -81,7 +81,7 @@ export default function HeroSection() {
                   { label: 'Hoodie Print', price: 'Rs. 2,499' },
                   { label: 'Custom Mug', price: 'Rs. 799' },
                   { label: 'Phone Case', price: 'Rs. 1,199' },
-                ].map((item, i) => (
+                ].map((item) => (
                   <div key={item.label} className="rounded-2xl border border-white/15 bg-black/30 p-4">
                     <div className="h-28 rounded-xl bg-gradient-to-br from-white/10 to-white/0 mb-3" />
                     <p className="text-white text-sm font-bold">{item.label}</p>

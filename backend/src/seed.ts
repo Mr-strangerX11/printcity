@@ -1,251 +1,142 @@
 /**
- * Mongoose seed script — run with: npx ts-node src/seed.ts
- * Populates users, vendors, categories, products, and variants.
+ * Print City — complete seed script
+ * Run: npx ts-node -r tsconfig-paths/register src/seed.ts
+ * Clears ALL products, images, variants, categories then re-creates a 25-product catalogue.
  */
 import mongoose, { Types } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
 
-// ─── Schemas ───────────────────────────────────────────────────────────────
-
-const UserSchema = new mongoose.Schema(
-  {
-    name: String,
-    email: { type: String, unique: true },
-    passwordHash: String,
-    role: { type: String, enum: ['ADMIN', 'VENDOR', 'CUSTOMER'], default: 'CUSTOMER' },
-    avatar: String,
-    phone: String,
-    googleId: String,
-    isActive: { type: Boolean, default: true },
-    isVerified: { type: Boolean, default: false },
-  },
-  { timestamps: true },
-);
-
-const VendorSchema = new mongoose.Schema(
-  {
-    userId: { type: Types.ObjectId, ref: 'User', unique: true },
-    storeName: String,
-    storeSlug: { type: String, unique: true },
-    description: String,
-    commissionRate: { type: Number, default: 0.1 },
-    status: { type: String, enum: ['PENDING', 'ACTIVE', 'SUSPENDED'], default: 'PENDING' },
-    totalEarnings: { type: Number, default: 0 },
-  },
-  { timestamps: true },
-);
-
-const CategorySchema = new mongoose.Schema(
-  {
-    name: String,
-    slug: { type: String, unique: true },
-    image: String,
-    parentId: { type: Types.ObjectId, ref: 'Category', default: null },
-  },
-  { timestamps: true },
-);
-
-const ProductSchema = new mongoose.Schema(
-  {
-    vendorId: { type: Types.ObjectId, ref: 'Vendor' },
-    categoryId: { type: Types.ObjectId, ref: 'Category', default: null },
-    title: String,
-    slug: { type: String, unique: true },
-    description: String,
-    basePrice: Number,
-    status: { type: String, enum: ['DRAFT', 'ACTIVE', 'ARCHIVED'], default: 'DRAFT' },
-    tags: [String],
-  },
-  { timestamps: true },
-);
-
-const ProductImageSchema = new mongoose.Schema(
-  {
-    productId: { type: Types.ObjectId, ref: 'Product' },
-    url: String,
-    isPrimary: { type: Boolean, default: false },
-  },
-  { timestamps: true },
-);
-
-const ProductVariantSchema = new mongoose.Schema(
-  {
-    productId: { type: Types.ObjectId, ref: 'Product' },
-    size: String,
-    color: String,
-    stock: { type: Number, default: 0 },
-    price: Number,
-    sku: String,
-  },
-  { timestamps: true },
-);
+const UserSchema = new mongoose.Schema({ name: String, email: { type: String, unique: true }, passwordHash: String, role: { type: String, enum: ['ADMIN','VENDOR','CUSTOMER'], default: 'CUSTOMER' }, isActive: { type: Boolean, default: true }, isVerified: { type: Boolean, default: false } }, { timestamps: true });
+const VendorSchema = new mongoose.Schema({ userId: { type: Types.ObjectId, ref: 'User', unique: true }, storeName: String, storeSlug: { type: String, unique: true }, description: String, commissionRate: { type: Number, default: 0.1 }, status: { type: String, enum: ['PENDING','ACTIVE','SUSPENDED'], default: 'PENDING' }, totalEarnings: { type: Number, default: 0 } }, { timestamps: true });
+const CategorySchema = new mongoose.Schema({ name: String, slug: { type: String, unique: true }, image: String, parentId: { type: Types.ObjectId, ref: 'Category', default: null } }, { timestamps: true });
+const ProductSchema = new mongoose.Schema({ vendorId: { type: Types.ObjectId, ref: 'Vendor' }, categoryId: { type: Types.ObjectId, ref: 'Category', default: null }, title: String, slug: { type: String, unique: true }, description: String, basePrice: Number, status: { type: String, enum: ['DRAFT','PENDING_APPROVAL','ACTIVE','REJECTED','ARCHIVED'], default: 'DRAFT' }, tags: [String], customizable: { type: Boolean, default: false }, printAreas: { type: Object, default: null }, mockupImages: { type: [Object], default: [] }, availablePrintMethods: { type: [String], default: [] } }, { timestamps: true });
+const ProductImageSchema = new mongoose.Schema({ productId: { type: Types.ObjectId, ref: 'Product' }, url: String, isPrimary: { type: Boolean, default: false }, altText: String }, { timestamps: true });
+const ProductVariantSchema = new mongoose.Schema({ productId: { type: Types.ObjectId, ref: 'Product' }, size: String, color: String, stock: { type: Number, default: 0 }, price: Number, sku: String }, { timestamps: true });
 ProductVariantSchema.index({ productId: 1, size: 1, color: 1 }, { unique: true });
 
-const UserModel = mongoose.model('User', UserSchema);
-const VendorModel = mongoose.model('Vendor', VendorSchema);
-const CategoryModel = mongoose.model('Category', CategorySchema);
-const ProductModel = mongoose.model('Product', ProductSchema);
-const ProductImageModel = mongoose.model('ProductImage', ProductImageSchema);
-const ProductVariantModel = mongoose.model('ProductVariant', ProductVariantSchema);
+const CartItemSchema  = new mongoose.Schema({ cartId: Types.ObjectId, productVariantId: Types.ObjectId, qty: Number, isCustom: Boolean, customization: Object }, { timestamps: true });
+const CartSchema      = new mongoose.Schema({ userId: { type: Types.ObjectId, unique: true } }, { timestamps: true });
+const OrderItemSchema = new mongoose.Schema({ orderId: Types.ObjectId, productId: Types.ObjectId, variantId: Types.ObjectId, vendorId: Types.ObjectId }, { timestamps: true });
+const OrderSchema     = new mongoose.Schema({ userId: Types.ObjectId }, { timestamps: true });
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+const UserModel      = mongoose.model('User', UserSchema);
+const VendorModel    = mongoose.model('Vendor', VendorSchema);
+const CategoryModel  = mongoose.model('Category', CategorySchema);
+const ProductModel   = mongoose.model('Product', ProductSchema);
+const ImageModel     = mongoose.model('ProductImage', ProductImageSchema);
+const VariantModel   = mongoose.model('ProductVariant', ProductVariantSchema);
+const CartModel      = mongoose.model('Cart', CartSchema);
+const CartItemModel  = mongoose.model('CartItem', CartItemSchema);
+const OrderModel     = mongoose.model('Order', OrderSchema);
+const OrderItemModel = mongoose.model('OrderItem', OrderItemSchema);
 
-async function upsertUser(data: {
-  email: string; name: string; passwordHash: string; role: string; isVerified?: boolean;
-}) {
-  await UserModel.findOneAndUpdate(
-    { email: data.email },
-    { $setOnInsert: data },
-    { upsert: true, new: true },
-  );
-  return UserModel.findOneAndUpdate(
-    { email: data.email },
-    { $set: { isVerified: true } },
-    { new: true },
-  );
+const U = (id: string, w = 800) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=80`;
+
+const PA_TSHIRT   = { front: { x:28, y:22, width:44, height:36 }, back: { x:28, y:18, width:44, height:40 } };
+const PA_HOODIE   = { front: { x:30, y:28, width:40, height:32 }, back: { x:28, y:15, width:44, height:40 } };
+const PA_MUG      = { front: { x:18, y:22, width:64, height:52 } };
+const PA_CAP      = { front: { x:28, y:28, width:44, height:38 } };
+const PA_BAG      = { front: { x:22, y:18, width:56, height:60 } };
+const PA_PHONE    = { front: { x:12, y:10, width:76, height:80 } };
+const PA_MOUSEPAD = { front: { x:4, y:4, width:92, height:92 } };
+const PA_CANVAS   = { front: { x:2, y:2, width:96, height:96 } };
+
+async function upsertUser(d: { email: string; name: string; passwordHash: string; role: string }) {
+  await UserModel.findOneAndUpdate({ email: d.email }, { $setOnInsert: d }, { upsert: true, new: true });
+  return UserModel.findOneAndUpdate({ email: d.email }, { $set: { isVerified: true, isActive: true } }, { new: true });
 }
 
-async function upsertCategory(slug: string, name: string, image: string) {
-  return CategoryModel.findOneAndUpdate(
-    { slug },
-    { $setOnInsert: { slug, name, image } },
-    { upsert: true, new: true },
-  );
+async function mkProduct(opts: any) {
+  const p = await ProductModel.create({ vendorId: opts.v._id, categoryId: opts.c._id, title: opts.title, slug: opts.slug, description: opts.desc, basePrice: opts.price, status: 'ACTIVE', tags: opts.tags, customizable: opts.customizable ?? false, printAreas: opts.pa ?? null, mockupImages: opts.mockups ?? [], availablePrintMethods: opts.methods ?? [] });
+  for (let i = 0; i < opts.imgs.length; i++) await ImageModel.create({ productId: p._id, url: opts.imgs[i][0], isPrimary: i === 0, altText: opts.imgs[i][1] });
+  for (const size of opts.sizes) for (const color of opts.colors) {
+    try { await VariantModel.create({ productId: p._id, size, color, stock: opts.stock ?? (Math.floor(Math.random()*80)+20), price: opts.price + (opts.priceExtra?.[size] ?? 0), sku: `${String(p._id).slice(-5)}-${size}-${color}`.toUpperCase().replace(/\s+/g,'-') }); } catch { /* dup */ }
+  }
+  return p;
 }
-
-// ─── Main ───────────────────────────────────────────────────────────────────
 
 const MONGO_URI = process.env.DATABASE_URL ?? 'mongodb://127.0.0.1:27017/print-city';
 
 async function main() {
   await mongoose.connect(MONGO_URI);
-  console.log('🔌 Connected to MongoDB:', MONGO_URI);
+  console.log('🔌 Connected');
 
-  // ── Users ──────────────────────────────────────────────────────────────
-  const adminHash = await bcrypt.hash('Admin@123', 12);
-  const vendorHash = await bcrypt.hash('Vendor@123', 12);
-  const customerHash = await bcrypt.hash('Customer@123', 12);
+  const [aH,vH,cH] = await Promise.all([bcrypt.hash('Admin@123',12), bcrypt.hash('Vendor@123',12), bcrypt.hash('Customer@123',12)]);
+  const v1u = await upsertUser({ email:'vendor1@PrintCity.com', name:'Alex Design Studio', passwordHash:vH, role:'VENDOR' });
+  const v2u = await upsertUser({ email:'vendor2@PrintCity.com', name:'PrintPop Creative',  passwordHash:vH, role:'VENDOR' });
+  await upsertUser({ email:'admin@PrintCity.com',    name:'PrintCity Admin',     passwordHash:aH, role:'ADMIN' });
+  await upsertUser({ email:'customer@PrintCity.com', name:'Jane Customer', passwordHash:cH, role:'CUSTOMER' });
 
-  const admin = await upsertUser({ email: 'admin@ap.com', name: 'AP Admin', passwordHash: adminHash, role: 'ADMIN', isVerified: true });
-  const vendor1User = await upsertUser({ email: 'vendor1@ap.com', name: 'Alex Design Studio', passwordHash: vendorHash, role: 'VENDOR', isVerified: true });
-  const vendor2User = await upsertUser({ email: 'vendor2@ap.com', name: 'PrintPop Creative', passwordHash: vendorHash, role: 'VENDOR', isVerified: true });
-  await upsertUser({ email: 'customer@ap.com', name: 'Jane Customer', passwordHash: customerHash, role: 'CUSTOMER', isVerified: true });
-  console.log('✅ Users created');
+  const v1 = await VendorModel.findOneAndUpdate({ userId: v1u!._id }, { $setOnInsert: { userId:v1u!._id, storeName:'Alex Design Studio', storeSlug:'alex-design-studio', description:'Premium custom print solutions.', commissionRate:0.12, status:'ACTIVE' } }, { upsert:true, new:true });
+  const v2 = await VendorModel.findOneAndUpdate({ userId: v2u!._id }, { $setOnInsert: { userId:v2u!._id, storeName:'PrintPop Creative', storeSlug:'printpop-creative', description:'Bold, vibrant custom printing.', commissionRate:0.10, status:'ACTIVE' } }, { upsert:true, new:true });
+  console.log('✅ Users & vendors ready');
 
-  // ── Vendors ────────────────────────────────────────────────────────────
-  const vendor1 = await VendorModel.findOneAndUpdate(
-    { userId: vendor1User!._id },
-    {
-      $setOnInsert: {
-        userId: vendor1User!._id,
-        storeName: 'Alex Design Studio',
-        storeSlug: 'alex-design-studio',
-        description: 'Premium custom apparel designs. Minimalist and modern aesthetic.',
-        commissionRate: 0.12,
-        status: 'ACTIVE',
-      },
-    },
-    { upsert: true, new: true },
-  );
-
-  const vendor2 = await VendorModel.findOneAndUpdate(
-    { userId: vendor2User!._id },
-    {
-      $setOnInsert: {
-        userId: vendor2User!._id,
-        storeName: 'PrintPop Creative',
-        storeSlug: 'printpop-creative',
-        description: 'Bold, vibrant designs for every personality.',
-        commissionRate: 0.10,
-        status: 'ACTIVE',
-      },
-    },
-    { upsert: true, new: true },
-  );
-  console.log('✅ Vendors created');
-
-  // ── Categories ─────────────────────────────────────────────────────────
-  const imgBase = 'https://res.cloudinary.com/demo/image/upload/sample.jpg';
-  const cats = await Promise.all([
-    upsertCategory('t-shirts', 'T-Shirts', imgBase),
-    upsertCategory('hoodies', 'Hoodies', imgBase),
-    upsertCategory('mugs', 'Mugs', imgBase),
-    upsertCategory('posters', 'Posters', imgBase),
-    upsertCategory('phone-cases', 'Phone Cases', imgBase),
+  await Promise.all([
+    ImageModel.deleteMany({}), VariantModel.deleteMany({}),
+    CartItemModel.deleteMany({}), CartModel.deleteMany({}),
+    OrderItemModel.deleteMany({}), OrderModel.deleteMany({}),
   ]);
-  console.log('✅ Categories created');
+  await ProductModel.deleteMany({});
+  await CategoryModel.deleteMany({});
+  console.log('🗑  Cleared old data');
 
-  // ── Products ───────────────────────────────────────────────────────────
-  const imageMap: Record<string, string> = {
-    'minimalist-mountain-tee': 'photo-1521572163474-6864f9cf17ab',
-    'abstract-waves-tee': 'photo-1552062407-291c33eac3af',
-    'gradient-sunset-hoodie': 'photo-1556821552-9ae0d9e07871',
-    'neon-city-lights-tee': 'photo-1521572163474-6864f9cf17ab',
-    'retro-space-mug': 'photo-1514432324607-2e2be62dbd45',
-    'botanical-print-hoodie': 'photo-1556821552-9ae0d9e07871',
-    'geometric-forest-poster': 'photo-1540570132963-6bdb005c69fe',
-    'pixel-art-phone-case': 'photo-1574411662470-fa280b2fc399',
-    'typography-quote-tee': 'photo-1521572163474-6864f9cf17ab',
-    'minimalist-coffee-mug': 'photo-1514432324607-2e2be62dbd45',
-  };
+  const catDefs = [['digital-print','Digital Print','1591035897819-f4bdf739f446'],['large-format','Large Format','1504198458649-3128b932f49e'],['events','Events & Invitations','1519225421436-ddbbc8f75a5c'],['apparel','Apparel','1583743814966-8936f5b7be1a'],['product-packaging','Product Packaging','1553531889-56cc480ac5cb'],['logo-print','Logo & Promo','1514432324607-2e2be62dbd45'],['3d-print','3D Printing','1581578731548-c64695cc6952'],['stationery','Stationery','1542744173-8e7e53415bb0']];
+  const C: Record<string,any> = {};
+  for (const [slug,name,imgId] of catDefs) C[slug] = await CategoryModel.create({ name, slug, image: U(imgId) });
+  console.log('✅ 8 categories created');
 
-  const productData = [
-    { vendor: vendor1, cat: cats[0], title: 'Minimalist Mountain Tee', slug: 'minimalist-mountain-tee', desc: 'Clean mountain silhouette on premium 100% cotton.', basePrice: 799, sizes: ['XS','S','M','L','XL','XXL'], colors: ['White','Black','Navy'] },
-    { vendor: vendor1, cat: cats[0], title: 'Abstract Waves Tee', slug: 'abstract-waves-tee', desc: 'Bold abstract wave pattern. 100% organic cotton.', basePrice: 849, sizes: ['S','M','L','XL'], colors: ['White','Light Gray'] },
-    { vendor: vendor1, cat: cats[1], title: 'Gradient Sunset Hoodie', slug: 'gradient-sunset-hoodie', desc: 'Warm gradient sunset print on heavyweight fleece hoodie.', basePrice: 1499, sizes: ['S','M','L','XL','XXL'], colors: ['Black','Charcoal'] },
-    { vendor: vendor2, cat: cats[0], title: 'Neon City Lights Tee', slug: 'neon-city-lights-tee', desc: 'Vibrant neon cityscape design. Glow in the dark ink.', basePrice: 899, sizes: ['S','M','L','XL'], colors: ['Black','Dark Navy'] },
-    { vendor: vendor2, cat: cats[2], title: 'Retro Space Mug', slug: 'retro-space-mug', desc: '11oz ceramic mug with retro space illustration.', basePrice: 599, sizes: ['11oz','15oz'], colors: ['White','Black'] },
-    { vendor: vendor2, cat: cats[1], title: 'Botanical Print Hoodie', slug: 'botanical-print-hoodie', desc: 'Delicate botanical illustration on soft pullover hoodie.', basePrice: 1599, sizes: ['XS','S','M','L','XL'], colors: ['Forest Green','Cream'] },
-    { vendor: vendor1, cat: cats[3], title: 'Geometric Forest Poster', slug: 'geometric-forest-poster', desc: 'A4/A3 print-ready geometric forest art.', basePrice: 399, sizes: ['A4','A3'], colors: ['Full Color','Black & White'] },
-    { vendor: vendor1, cat: cats[4], title: 'Pixel Art Phone Case', slug: 'pixel-art-phone-case', desc: 'Retro pixel art design for major phone models.', basePrice: 499, sizes: ['iPhone 14','iPhone 15','Samsung S23'], colors: ['Transparent','White','Black'] },
-    { vendor: vendor2, cat: cats[0], title: 'Typography Quote Tee', slug: 'typography-quote-tee', desc: '"Create boldly" typographic design on premium tee.', basePrice: 749, sizes: ['S','M','L','XL'], colors: ['White','Black'] },
-    { vendor: vendor2, cat: cats[2], title: 'Minimalist Coffee Mug', slug: 'minimalist-coffee-mug', desc: 'Clean geometric design. Perfect morning companion.', basePrice: 549, sizes: ['11oz'], colors: ['White','Matte Black'] },
-  ];
+  // ── Digital Print ──────────────────────────────────────────────────────────
+  await mkProduct({ v:v1, c:C['digital-print'], title:'Premium Business Cards', slug:'premium-business-cards', desc:'Make a lasting impression with 400gsm silk-finish business cards. Full-colour double-sided print. Standard, square, or rounded corners. Perfect for professionals, freelancers, and businesses.', price:499, tags:['business cards','visiting cards','branding','professional'], imgs:[[U('1591035897819-f4bdf739f446'),'Business cards stack'],[U('1523206489230-c012c64b2b48'),'Card design close-up'],[U('1542744173-8e7e53415bb0'),'Cards on desk'],[U('1586296397905-7e73a21e6b72'),'Premium card spread']], sizes:['50 pcs','100 pcs','250 pcs','500 pcs'], colors:['Full Color Gloss','Full Color Matte','Spot UV'], priceExtra:{'100 pcs':200,'250 pcs':600,'500 pcs':1100}, stock:999 });
+  await mkProduct({ v:v1, c:C['digital-print'], title:'A5 Flyers & Leaflets', slug:'a5-flyers-leaflets', desc:'High-impact promotional flyers on 170gsm gloss paper. Vibrant full-colour on one or both sides. Great for events, promotions, menus, and announcements.', price:299, tags:['flyers','leaflets','promotional','marketing'], imgs:[[U('1586963393046-f7b17f47d7e4'),'Flyers stack'],[U('1586958819292-ad65d0c45e73'),'Printed flyers'],[U('1558021212-51b6ecfa0db9'),'Flyer design']], sizes:['100 pcs','250 pcs','500 pcs','1000 pcs'], colors:['Full Color Single Side','Full Color Double Side'], priceExtra:{'250 pcs':300,'500 pcs':600,'1000 pcs':1000}, stock:999 });
+  await mkProduct({ v:v2, c:C['digital-print'], title:'Tri-Fold Brochure', slug:'tri-fold-brochure', desc:'Professional tri-fold brochures on 130gsm gloss art paper. Ideal for product catalogues, company profiles, menus, and service overviews. Full-colour inside and out.', price:799, tags:['brochure','trifold','marketing','catalogue'], imgs:[[U('1543269865-cbf427effbad'),'Tri-fold brochure'],[U('1586963393046-f7b17f47d7e4'),'Brochure stack']], sizes:['50 pcs','100 pcs','250 pcs','500 pcs'], colors:['Full Color'], priceExtra:{'100 pcs':500,'250 pcs':1000,'500 pcs':1800}, stock:999 });
+  await mkProduct({ v:v1, c:C['digital-print'], title:'A3 Poster Printing', slug:'a3-poster-printing', desc:'Stunning high-resolution A3 posters on 200gsm semi-gloss paper. Perfect for indoor displays, events, and retail. Matte, gloss, and satin finish available.', price:199, tags:['poster','print','display','advertising'], imgs:[[U('1581889204067-bab7f1975e6e'),'Poster on wall'],[U('1611605698335-8440d1e7f983'),'Colorful poster'],[U('1594736797933-d0501ba2fe65'),'Art print poster']], sizes:['1 pc','5 pcs','10 pcs','25 pcs','50 pcs'], colors:['Full Color Gloss','Full Color Matte'], priceExtra:{'5 pcs':150,'10 pcs':400,'25 pcs':800,'50 pcs':1400}, stock:999 });
+  await mkProduct({ v:v2, c:C['digital-print'], title:'Custom Die-Cut Stickers', slug:'custom-die-cut-stickers', desc:'High-quality vinyl die-cut stickers cut precisely to your shape. UV-resistant, weatherproof. Perfect for branding, product packaging, and giveaways.', price:149, tags:['stickers','vinyl','die-cut','branding'], imgs:[[U('1607082348824-0a96f2a4b9da'),'Custom stickers'],[U('1558021212-51b6ecfa0db9'),'Sticker design']], sizes:['25 pcs','50 pcs','100 pcs','250 pcs'], colors:['Full Color'], priceExtra:{'50 pcs':100,'100 pcs':200,'250 pcs':400}, stock:999 });
 
-  for (const p of productData) {
-    const existing = await ProductModel.findOne({ slug: p.slug });
-    if (existing) continue;
+  // ── Apparel — Customizable ─────────────────────────────────────────────────
+  await mkProduct({ v:v2, c:C['apparel'], title:'Custom Printed T-Shirt', slug:'custom-printed-t-shirt', desc:'Design your own 100% cotton premium tee using our live customizer. Upload logo, add text, resize & place. Front and back printing. DTG, screen print, and vinyl options. 8 colours.', price:799, tags:['t-shirt','custom','apparel','print'], imgs:[[U('1583743814966-8936f5b7be1a'),'Custom t-shirt front'],[U('1503341504253-dff4815485f1'),'T-shirt hanging'],[U('1562157873-818bc0726f68'),'T-shirt flat lay'],[U('1529374255913-93e0a9b7ba6f'),'T-shirt lifestyle']], sizes:['XS','S','M','L','XL','XXL','3XL'], colors:['White','Black','Navy','Royal Blue','Red','Forest Green','Heather Grey','Yellow'], priceExtra:{'XXL':50,'3XL':100}, customizable:true, pa:PA_TSHIRT, mockups:[{color:'White',hex:'#FFFFFF',front:U('1562157873-818bc0726f68',600),back:U('1503341504253-dff4815485f1',600)},{color:'Black',hex:'#1a1a1a',front:U('1583743814966-8936f5b7be1a',600),back:U('1583743814966-8936f5b7be1a',600)},{color:'Navy',hex:'#1e3a5f',front:U('1529374255913-93e0a9b7ba6f',600)},{color:'Royal Blue',hex:'#2563eb',front:U('1529374255913-93e0a9b7ba6f',600)},{color:'Red',hex:'#dc2626',front:U('1503341504253-dff4815485f1',600)},{color:'Forest Green',hex:'#166534',front:U('1529374255913-93e0a9b7ba6f',600)},{color:'Heather Grey',hex:'#9ca3af',front:U('1562157873-818bc0726f68',600)},{color:'Yellow',hex:'#facc15',front:U('1562157873-818bc0726f68',600)}], methods:['DTG','Screen Print','Vinyl HTV'] });
+  await mkProduct({ v:v2, c:C['apparel'], title:'Custom Hoodie', slug:'custom-hoodie', desc:'Premium 350gsm fleece pullover hoodie. Use our live customizer — upload logos, add text, choose colours. Kangaroo pocket, ribbed cuffs. Great for teams and gifts.', price:1499, tags:['hoodie','custom','apparel','sweatshirt'], imgs:[[U('1556821552-9ae0d9e07871'),'Custom hoodie front'],[U('1620799139507-2a76f79a2f4d'),'Hoodie flat lay'],[U('1578681994506-b8f463449011'),'Hoodie lifestyle']], sizes:['XS','S','M','L','XL','XXL'], colors:['Black','Heather Grey','Navy','Forest Green','Burgundy'], priceExtra:{'XXL':100}, customizable:true, pa:PA_HOODIE, mockups:[{color:'Black',hex:'#1a1a1a',front:U('1556821552-9ae0d9e07871',600),back:U('1556821552-9ae0d9e07871',600)},{color:'Heather Grey',hex:'#9ca3af',front:U('1620799139507-2a76f79a2f4d',600)},{color:'Navy',hex:'#1e3a5f',front:U('1578681994506-b8f463449011',600)},{color:'Forest Green',hex:'#166534',front:U('1556821552-9ae0d9e07871',600)},{color:'Burgundy',hex:'#7f1d1d',front:U('1578681994506-b8f463449011',600)}], methods:['DTG','Screen Print','Embroidery'] });
+  await mkProduct({ v:v1, c:C['apparel'], title:'Custom Polo Shirt', slug:'custom-polo-shirt', desc:'Corporate-grade polo with custom embroidery or print. 220gsm piqué cotton. Ideal for uniforms and brand merchandise. Left chest and full back available.', price:999, tags:['polo','uniform','corporate','custom'], imgs:[[U('1529374255913-93e0a9b7ba6f'),'Polo shirt worn'],[U('1583743814966-8936f5b7be1a'),'Polo shirt flat']], sizes:['XS','S','M','L','XL','XXL'], colors:['White','Black','Navy','Royal Blue','Red','Sky Blue'], customizable:true, pa:{front:{x:10,y:20,width:28,height:24},back:{x:20,y:10,width:60,height:50}}, mockups:[{color:'White',hex:'#FFFFFF',front:U('1529374255913-93e0a9b7ba6f',600)},{color:'Black',hex:'#1a1a1a',front:U('1583743814966-8936f5b7be1a',600)},{color:'Navy',hex:'#1e3a5f',front:U('1529374255913-93e0a9b7ba6f',600)}], methods:['Embroidery','DTG','Screen Print'] });
+  await mkProduct({ v:v1, c:C['apparel'], title:'Custom Printed Cap', slug:'custom-printed-cap', desc:'Structured 6-panel baseball cap with custom embroidery or print. Adjustable strap. Perfect for teams, events, and promotions. One-size-fits-most.', price:599, tags:['cap','hat','custom','embroidery'], imgs:[[U('1588850561407-ed78c282e89b'),'Custom cap front'],[U('1521369909029-2afed882baaa'),'Cap worn']], sizes:['One Size'], colors:['Black','White','Navy','Red','Grey','Royal Blue','Forest Green'], customizable:true, pa:PA_CAP, mockups:[{color:'Black',hex:'#1a1a1a',front:U('1588850561407-ed78c282e89b',600)},{color:'White',hex:'#FFFFFF',front:U('1521369909029-2afed882baaa',600)},{color:'Navy',hex:'#1e3a5f',front:U('1588850561407-ed78c282e89b',600)},{color:'Red',hex:'#dc2626',front:U('1521369909029-2afed882baaa',600)},{color:'Forest Green',hex:'#166534',front:U('1588850561407-ed78c282e89b',600)}], methods:['Embroidery','DTG'] });
+  await mkProduct({ v:v2, c:C['apparel'], title:'Custom Tote Bag', slug:'custom-tote-bag', desc:'Heavy-duty 280gsm natural cotton canvas tote bag with custom print. Long handles, reinforced base. Perfect for retail merchandise, eco-promotions, and events.', price:499, tags:['tote bag','cotton bag','eco','custom'], imgs:[[U('1590874103328-eac38a683ce7'),'Custom tote bag'],[U('1597484621730-31d33bc7b3ad'),'Tote bag lifestyle']], sizes:['38×42 cm','40×45 cm','42×48 cm'], colors:['Natural','Black','Navy','Forest Green'], customizable:true, pa:PA_BAG, mockups:[{color:'Natural',hex:'#f5f0e8',front:U('1590874103328-eac38a683ce7',600)},{color:'Black',hex:'#1a1a1a',front:U('1597484621730-31d33bc7b3ad',600)},{color:'Navy',hex:'#1e3a5f',front:U('1590874103328-eac38a683ce7',600)},{color:'Forest Green',hex:'#166534',front:U('1597484621730-31d33bc7b3ad',600)}], methods:['Screen Print','DTG','Vinyl HTV'] });
 
-    const imageId = imageMap[p.slug] ?? 'photo-1521572163474-6864f9cf17ab';
-    const imageUrl = `https://images.unsplash.com/${imageId}?w=800&q=80`;
+  // ── Logo & Promo — Customizable ────────────────────────────────────────────
+  await mkProduct({ v:v1, c:C['logo-print'], title:'Custom Printed Mug', slug:'custom-printed-mug', desc:'11oz ceramic mug with vibrant full-wrap print. Dishwasher-safe dye-sublimation. Perfect for gifts, corporate merchandise, and giveaways. Design with our live tool.', price:449, tags:['mug','coffee mug','custom','gift','promo'], imgs:[[U('1514432324607-2e2be62dbd45'),'White custom mug'],[U('1572119865084-43c285814d63'),'Mug side view'],[U('1504754524776-8f4f37790ca0'),'Mug on desk']], sizes:['11oz','15oz'], colors:['White','Black','Accent Red','Accent Blue'], priceExtra:{'15oz':100}, customizable:true, pa:PA_MUG, mockups:[{color:'White',hex:'#FFFFFF',front:U('1514432324607-2e2be62dbd45',600)},{color:'Black',hex:'#1a1a1a',front:U('1572119865084-43c285814d63',600)},{color:'Accent Red',hex:'#dc2626',front:U('1504754524776-8f4f37790ca0',600)}], methods:['Dye Sublimation'] });
+  await mkProduct({ v:v1, c:C['logo-print'], title:'Custom Phone Case', slug:'custom-phone-case', desc:'Slim hard-shell phone case with full-coverage custom print. Drop-resistant polycarbonate. Covers all major iPhone & Samsung models. Upload your design in our live customizer.', price:599, tags:['phone case','mobile case','custom','gift'], imgs:[[U('1574011431548-89e786ba7ac4'),'Custom phone case'],[U('1580894742597-87bc8789db3d'),'Phone case on phone']], sizes:['iPhone 15','iPhone 15 Pro','iPhone 14','iPhone 14 Pro','Samsung S24','Samsung S23','Samsung A54'], colors:['Transparent','White','Black'], customizable:true, pa:PA_PHONE, mockups:[{color:'Transparent',hex:'transparent',front:U('1574011431548-89e786ba7ac4',600)},{color:'White',hex:'#FFFFFF',front:U('1580894742597-87bc8789db3d',600)},{color:'Black',hex:'#1a1a1a',front:U('1574011431548-89e786ba7ac4',600)}], methods:['Dye Sublimation','UV Print'] });
+  await mkProduct({ v:v2, c:C['logo-print'], title:'Custom Mouse Pad', slug:'custom-mouse-pad', desc:'Large-format custom mouse pad with full-surface print. Non-slip rubber base, smooth fabric top. Perfect for gaming setups, office desks, and branded merchandise.', price:349, tags:['mouse pad','desk mat','custom','gaming'], imgs:[[U('1593642632559-0c6d3fc62b89'),'Custom mouse pad'],[U('1593640408182-31c228b536db'),'Mouse pad with mouse']], sizes:['Standard 25×20cm','Large 40×30cm','XL 80×40cm'], colors:['Custom Print'], priceExtra:{'Large 40×30cm':100,'XL 80×40cm':300}, customizable:true, pa:PA_MOUSEPAD, mockups:[{color:'Custom Print',hex:'#6366f1',front:U('1593642632559-0c6d3fc62b89',700)}], methods:['Dye Sublimation'] });
+  await mkProduct({ v:v2, c:C['logo-print'], title:'Custom Keychain', slug:'custom-keychain', desc:'Personalised acrylic keychain with custom shape and full-colour print. Double-sided option available. Great for gifts, events, and brand giveaways.', price:199, tags:['keychain','keyring','custom','gift','acrylic'], imgs:[[U('1601987077677-5154d81b1516'),'Custom keychain'],[U('1568605114967-8130f3a36994'),'Keychain collection']], sizes:['Round 5cm','Square 5×5cm','Custom Shape'], colors:['Clear','White','Mirror Gold','Mirror Silver'], priceExtra:{'Square 5×5cm':50,'Custom Shape':100}, customizable:true, pa:{front:{x:15,y:15,width:70,height:70}}, mockups:[{color:'Clear',hex:'transparent',front:U('1601987077677-5154d81b1516',600)},{color:'White',hex:'#FFFFFF',front:U('1601987077677-5154d81b1516',600)}], methods:['UV Print'] });
 
-    const product = await ProductModel.create({
-      vendorId: p.vendor._id,
-      categoryId: p.cat._id,
-      title: p.title,
-      slug: p.slug,
-      description: p.desc,
-      basePrice: p.basePrice,
-      status: 'ACTIVE',
-    });
+  // ── Large Format ───────────────────────────────────────────────────────────
+  await mkProduct({ v:v2, c:C['large-format'], title:'Vinyl Banner', slug:'vinyl-banner', desc:'Heavy-duty 440gsm PVC vinyl banner with full-colour printing. Reinforced hems and brass grommets. UV-resistant, waterproof, indoor/outdoor.', price:1299, tags:['banner','vinyl','outdoor','advertising'], imgs:[[U('1504198458649-3128b932f49e'),'Vinyl banner display'],[U('1536514498073-e38a61d25a28'),'Outdoor banner']], sizes:['2×1 ft','3×1.5 ft','4×2 ft','6×3 ft','8×4 ft'], colors:['Full Color'], priceExtra:{'3×1.5 ft':700,'4×2 ft':1200,'6×3 ft':2200,'8×4 ft':3500}, stock:50 });
+  await mkProduct({ v:v1, c:C['large-format'], title:'Roll-Up Banner Stand', slug:'roll-up-banner-stand', desc:'Premium retractable roll-up banner with aluminium stand. 85cm×200cm print. Easy setup and pack-away. Perfect for exhibitions, trade shows, and events.', price:2499, tags:['roll-up banner','retractable','exhibition','display'], imgs:[[U('1540575467063-178a50c2df87'),'Roll-up banner at event'],[U('1607082348824-0a96f2a4b9da'),'Banner stand']], sizes:['85×200 cm','100×200 cm','120×200 cm'], colors:['Silver Stand','Black Stand'], priceExtra:{'100×200 cm':500,'120×200 cm':1000}, stock:30 });
+  await mkProduct({ v:v2, c:C['large-format'], title:'Canvas Wall Print', slug:'canvas-wall-print', desc:'Gallery-quality canvas on 380gsm poly-cotton. Stretched over solid pine frame. Archival inks. Perfect for home décor, offices, and photo gifts.', price:899, tags:['canvas','wall art','photo print','gallery'], imgs:[[U('1516912481800-cf75e27f58e0'),'Canvas print on wall'],[U('1561214115-f2f134cc4912'),'Canvas art gallery']], sizes:['20×20 cm','30×30 cm','40×50 cm','50×70 cm','60×90 cm'], colors:['Full Color'], priceExtra:{'30×30 cm':300,'40×50 cm':700,'50×70 cm':1200,'60×90 cm':1800}, stock:40, customizable:true, pa:PA_CANVAS, mockups:[{color:'Full Color',hex:'#6366f1',front:U('1516912481800-cf75e27f58e0',700)}], methods:['Archival Inkjet'] });
 
-    await ProductImageModel.create({ productId: product._id, url: imageUrl, isPrimary: true });
+  // ── Events ─────────────────────────────────────────────────────────────────
+  await mkProduct({ v:v1, c:C['events'], title:'Wedding Invitation Cards', slug:'wedding-invitation-cards', desc:'Elegant wedding invitations on 400gsm luxury card stock. Pearl, kraft, and uncoated finishes. Single or double-sided. Matching RSVP cards available.', price:899, tags:['wedding','invitation','cards','event'], imgs:[[U('1519225421436-ddbbc8f75a5c'),'Wedding invitations'],[U('1519167758481-83f550bb49b3'),'Wedding stationery'],[U('1553531889-56cc480ac5cb'),'Card detail']], sizes:['25 pcs','50 pcs','100 pcs','200 pcs'], colors:['Pearl White','Ivory','Blush Pink','Sage Green','Kraft'], priceExtra:{'50 pcs':700,'100 pcs':1200,'200 pcs':2000}, stock:200 });
+  await mkProduct({ v:v2, c:C['events'], title:'Birthday Party Invites', slug:'birthday-party-invites', desc:'Fun and vibrant birthday invitation cards. 300gsm gloss finish. Great for kids parties, milestone birthdays, and surprise parties.', price:399, tags:['birthday','party','invitations','celebration'], imgs:[[U('1530103862676-de8c9debad1d'),'Birthday invites'],[U('1464349153735-7db50ed83c84'),'Party cards']], sizes:['10 pcs','25 pcs','50 pcs'], colors:['Full Color'], priceExtra:{'25 pcs':300,'50 pcs':500}, stock:200 });
+  await mkProduct({ v:v1, c:C['events'], title:'Event Menu Cards', slug:'event-menu-cards', desc:'Professional event and restaurant menu cards. Laminated or uncoated. Single page or folded. Perfect for weddings, corporate dinners, and restaurants.', price:299, tags:['menu','event','restaurant','wedding'], imgs:[[U('1508424757105-b6d5ad9329d0'),'Event menu cards'],[U('1414235077428-338989a2e8c0'),'Restaurant menu']], sizes:['A5 Single','A4 Single','A5 Folded','A4 Folded'], colors:['Full Color Gloss','Full Color Matte'], priceExtra:{'A4 Single':100,'A5 Folded':100,'A4 Folded':150}, stock:300 });
 
-    for (const size of p.sizes) {
-      for (const color of p.colors) {
-        const sku = `${String(product._id).slice(-6)}-${size}-${color}`.toUpperCase().replace(/\s/g, '-');
-        await ProductVariantModel.findOneAndUpdate(
-          { productId: product._id, size, color },
-          { $setOnInsert: { productId: product._id, size, color, stock: Math.floor(Math.random() * 50) + 10, price: p.basePrice + (size === 'XXL' ? 50 : 0), sku } },
-          { upsert: true },
-        );
-      }
-    }
-  }
-  console.log('✅ 10 products with variants created');
+  // ── Packaging ──────────────────────────────────────────────────────────────
+  await mkProduct({ v:v2, c:C['product-packaging'], title:'Custom Product Boxes', slug:'custom-product-boxes', desc:'Bespoke printed product boxes. E-flute corrugated or rigid board. Spot UV, embossing, and foil options. Min 50 units. Perfect for retail and premium gifting.', price:999, tags:['packaging','boxes','branding','retail'], imgs:[[U('1553531889-56cc480ac5cb'),'Custom product boxes'],[U('1606041011335-b3f03afe2f4b'),'Packaging boxes']], sizes:['50 pcs','100 pcs','250 pcs','500 pcs'], colors:['Full Color Gloss','Full Color Matte','Kraft Natural'], priceExtra:{'100 pcs':800,'250 pcs':1500,'500 pcs':2500}, stock:100 });
+  await mkProduct({ v:v1, c:C['product-packaging'], title:'Custom Paper Bags', slug:'custom-paper-bags', desc:'Branded paper shopping bags with rope handles. 150gsm kraft or white paper. Full-colour print or foil stamp. Perfect for retail stores, boutiques, and events.', price:599, tags:['paper bag','shopping bag','branding','retail'], imgs:[[U('1589985302254-5ed57af6c91b'),'Custom paper bags'],[U('1600585152220-90363fe7e115'),'Paper bag retail']], sizes:['Small','Medium','Large'], colors:['Kraft Brown','White','Full Color White'], priceExtra:{'Medium':200,'Large':400}, stock:200 });
+  await mkProduct({ v:v2, c:C['product-packaging'], title:'Custom Labels & Sticker Sheets', slug:'custom-labels-sticker-sheets', desc:'Custom printed label sheets for products, jars, and packaging. Waterproof vinyl or matte paper. Die-cut or full sheet. Perfect for small businesses.', price:349, tags:['labels','stickers','packaging','product labels'], imgs:[[U('1558021212-51b6ecfa0db9'),'Custom labels sheet']], sizes:['A4 Sheet ×10','A4 Sheet ×25','A4 Sheet ×50'], colors:['Full Color Gloss','Full Color Matte','Gold Foil','Silver Foil'], priceExtra:{'A4 Sheet ×25':500,'A4 Sheet ×50':900}, stock:500 });
 
-  console.log('');
-  console.log('─────────────────────────────────────');
-  console.log('🎉 Seed complete!');
-  console.log('');
-  console.log('Login credentials:');
-  console.log('  Admin:    admin@ap.com    / Admin@123');
-  console.log('  Vendor 1: vendor1@ap.com  / Vendor@123');
-  console.log('  Vendor 2: vendor2@ap.com  / Vendor@123');
-  console.log('  Customer: customer@ap.com / Customer@123');
-  console.log('─────────────────────────────────────');
+  // ── 3D Print ───────────────────────────────────────────────────────────────
+  await mkProduct({ v:v1, c:C['3d-print'], title:'Custom 3D Figurine', slug:'custom-3d-figurine', desc:'Personalised 3D-printed figurine from your photo or 3D model. Full-colour multi-material printing. Perfect for gifts, game miniatures, and keepsakes. ~10–15cm tall.', price:2499, tags:['3d print','figurine','custom','gift'], imgs:[[U('1581578731548-c64695cc6952'),'3D printed figurine'],[U('1605379399642-870262d3d051'),'3D model print']], sizes:['10 cm','15 cm','20 cm'], colors:['Full Color','White PLA','Grey Resin'], priceExtra:{'15 cm':500,'20 cm':1000}, stock:20 });
+  await mkProduct({ v:v2, c:C['3d-print'], title:'Prototype & Model Printing', slug:'prototype-model-printing', desc:'Professional FDM/SLA 3D printing for prototypes, models, and functional parts. Upload your STL file and we will print it. Materials: PLA, PETG, ABS, Resin.', price:999, tags:['prototype','3d print','model','engineering'], imgs:[[U('1612287230202-1ff1d85d1bdf'),'3D model detail'],[U('1581578731548-c64695cc6952'),'3D prototype']], sizes:['Small (10cm)','Medium (20cm)','Large (30cm)'], colors:['White PLA','Black PLA','Grey PETG','Clear Resin'], priceExtra:{'Medium (20cm)':1000,'Large (30cm)':2500}, stock:15 });
 
+  // ── Stationery ─────────────────────────────────────────────────────────────
+  await mkProduct({ v:v1, c:C['stationery'], title:'Custom Branded Notebook', slug:'custom-branded-notebook', desc:'A5 hardcover notebook with custom logo cover. 80gsm cream paper, 200 pages, ribbon bookmark. Ideal for corporate gifting and branded stationery.', price:799, tags:['notebook','stationery','corporate gift','branded'], imgs:[[U('1544716278-ca5e3f4abd8c'),'Custom branded notebook'],[U('1497633762265-9d179a990aa6'),'Notebook open']], sizes:['A6 Pocket','A5 Standard','A4 Large'], colors:['Black','Navy','Brown Kraft','Forest Green','Burgundy'], priceExtra:{'A4 Large':300}, stock:100 });
+  await mkProduct({ v:v2, c:C['stationery'], title:'Wall Calendar 2025', slug:'wall-calendar-2025', desc:'Custom 12-month wall calendar with your photos and branding. A3 size. Spiral-bound. Full-colour. Perfect for corporate gifts and promotional giveaways.', price:699, tags:['calendar','2025','wall calendar','corporate gift'], imgs:[[U('1586339949916-3e9457bef6d3'),'Wall calendar'],[U('1484480974693-6ca0a78fb36b'),'Custom calendar']], sizes:['1 pc','5 pcs','10 pcs','25 pcs'], colors:['Full Color'], priceExtra:{'5 pcs':500,'10 pcs':900,'25 pcs':2000}, stock:200 });
+
+  console.log('✅ 25 products created across 8 categories');
+  console.log('\n──────────────────────────────────────────');
+  console.log('🎉  Seed complete!');
+  console.log('\nCredentials:');
+  console.log('  Admin:    admin@PrintCity.com      / Admin@123');
+  console.log('  Vendor 1: vendor1@PrintCity.com    / Vendor@123');
+  console.log('  Vendor 2: vendor2@PrintCity.com    / Vendor@123');
+  console.log('  Customer: customer@PrintCity.com   / Customer@123');
+  console.log('──────────────────────────────────────────');
   await mongoose.disconnect();
 }
-
 main().catch((e) => { console.error(e); process.exit(1); });

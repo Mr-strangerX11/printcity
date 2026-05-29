@@ -1,14 +1,15 @@
 'use client';
+/* eslint-disable @next/next/no-img-element */
 
 import React, { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDropzone } from 'react-dropzone';
-import { Upload, X, Plus, Loader2 } from 'lucide-react';
+import { X, Plus, Loader2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { productsApi, categoriesApi, uploadsApi } from '@/lib/api';
-import { Category } from '@/types';
+import { productsApi, uploadsApi } from '@/lib/api';
+import { useCategories } from '@/hooks';
 import { toast } from 'sonner';
 import { getErrorMsg } from '@/lib/utils';
 
@@ -26,7 +27,7 @@ const COLORS = ['White', 'Black', 'Navy', 'Gray', 'Red', 'Forest Green', 'Maroon
 
 export default function NewDesignPage() {
   const router = useRouter();
-  const [categories, setCategories] = useState<Category[]>([]);
+  const { data: categories = [] } = useCategories();
   const [images, setImages] = useState<{ url: string; publicId: string }[]>([]);
   const [uploadingImg, setUploadingImg] = useState(false);
   const [variants, setVariants] = useState<{ size: string; color: string; stock: number; price: number }[]>([]);
@@ -35,14 +36,10 @@ export default function NewDesignPage() {
   const [variantPrice, setVariantPrice] = useState(799);
   const [variantStock, setVariantStock] = useState(20);
 
-  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { basePrice: 799 },
   });
-
-  React.useEffect(() => {
-    categoriesApi.list().then(({ data }) => setCategories(data.data ?? []));
-  }, []);
 
   const onDrop = useCallback(async (files: File[]) => {
     for (const file of files.slice(0, 5 - images.length)) {

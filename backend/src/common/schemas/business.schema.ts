@@ -30,7 +30,7 @@ export enum TicketPriority {
   URGENT = 'URGENT',
 }
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class Invoice extends Document {
   @Prop({ required: true, unique: true })
   invoiceNumber: string;
@@ -65,7 +65,7 @@ export class Invoice extends Document {
 
 export const InvoiceSchema = SchemaFactory.createForClass(Invoice);
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class Design extends Document {
   @Prop({ required: true })
   userId: string;
@@ -94,7 +94,7 @@ export class Design extends Document {
 
 export const DesignSchema = SchemaFactory.createForClass(Design);
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class SupportTicket extends Document {
   @Prop({ required: true })
   userId: string;
@@ -123,7 +123,7 @@ export class SupportTicket extends Document {
 
 export const SupportTicketSchema = SchemaFactory.createForClass(SupportTicket);
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class SupportMessage extends Document {
   @Prop({ required: true })
   ticketId: string;

@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class Address extends Document {
   @Prop({ required: true })
   userId: string;
@@ -39,7 +39,7 @@ export class Address extends Document {
 
 export const AddressSchema = SchemaFactory.createForClass(Address);
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class Review extends Document {
   @Prop({ required: true })
   productId: string;
@@ -68,7 +68,7 @@ export class Review extends Document {
 
 export const ReviewSchema = SchemaFactory.createForClass(Review);
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class WishlistItem extends Document {
   @Prop({ required: true })
   userId: string;

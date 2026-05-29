@@ -28,7 +28,7 @@ const sections = [
   },
   {
     title: 'Your Rights',
-    body: `You have the right to access, correct, or delete your personal information. You can update your profile information from your dashboard. To request account deletion or a copy of your data, please contact us at privacy@apmarketplace.com.`,
+    body: `You have the right to access, correct, or delete your personal information. You can update your profile information from your dashboard. To request account deletion or a copy of your data, please contact us at privacy@PrintCity.com.`,
   },
   {
     title: 'Changes to This Policy',

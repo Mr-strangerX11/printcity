@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { ChevronLeft, Loader2 } from 'lucide-react';
 import { ordersApi } from '@/lib/api';
 import { Order, OrderStatus } from '@/types';
-import { formatPrice, formatDate, ORDER_TIMELINE, getErrorMsg } from '@/lib/utils';
+import { formatPrice, formatDate, getErrorMsg } from '@/lib/utils';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { OrderTimeline } from '@/components/ui/OrderTimeline';
 import { toast } from 'sonner';

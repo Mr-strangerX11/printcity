@@ -1,15 +1,14 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import Cookies from 'js-cookie';
-import { authApi } from '@/lib/api';
+import { authApi, api } from '@/lib/api';
 import { User } from '@/types';
 
 interface AuthState {
   user: User | null;
   loading: boolean;
-  login: (accessToken: string, refreshToken: string) => Promise<void>;
-  logout: () => void;
+  login: () => Promise<void>;
+  logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
 
@@ -17,7 +16,7 @@ const AuthContext = createContext<AuthState>({
   user: null,
   loading: true,
   login: async () => {},
-  logout: () => {},
+  logout: async () => {},
   refreshUser: async () => {},
 });
 
@@ -26,14 +25,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchUser = useCallback(async () => {
-    const token = Cookies.get('accessToken');
-    if (!token) { setLoading(false); return; }
     try {
       const { data } = await authApi.me();
       setUser(data.data);
     } catch {
-      Cookies.remove('accessToken');
-      Cookies.remove('refreshToken');
       setUser(null);
     } finally {
       setLoading(false);
@@ -42,17 +37,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => { fetchUser(); }, [fetchUser]);
 
-  const login = async (accessToken: string, refreshToken: string) => {
-    Cookies.set('accessToken', accessToken, { expires: 1 });
-    Cookies.set('refreshToken', refreshToken, { expires: 7 });
+  // login() is called AFTER the backend has already set httpOnly cookies.
+  // It just fetches the current user to populate client state.
+  const login = async () => {
+    setLoading(true);
     await fetchUser();
   };
 
-  const logout = () => {
-    Cookies.remove('accessToken');
-    Cookies.remove('refreshToken');
+  const logout = async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch {
+      // ignore — cookies may already be cleared
+    }
     setUser(null);
-    window.location.href = '/';
+    if (typeof window !== 'undefined') window.location.href = '/';
   };
 
   const refreshUser = fetchUser;

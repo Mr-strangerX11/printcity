@@ -30,24 +30,40 @@ export class CartService {
 
   private async populateCartItems(cartId: Types.ObjectId | string) {
     const items = await this.cartItemModel.find({ cartId: new Types.ObjectId(cartId.toString()) }).lean().exec();
+    if (!items.length) return [];
 
-    return Promise.all(
-      items.map(async (item) => {
-        const variant = await this.variantModel.findById(item.productVariantId).lean().exec();
-        if (!variant) return { ...item, variant: null };
+    // Batch fetch all variants in one query (eliminates N queries)
+    const variantIds = items.map(i => i.productVariantId);
+    const variants = await this.variantModel.find({ _id: { $in: variantIds } }).lean().exec();
+    const variantMap = new Map(variants.map(v => [v._id.toString(), v]));
 
-        const product = await this.productModel.findById(variant.productId).lean().exec();
-        const primaryImage = product
-          ? await this.imageModel.findOne({ productId: variant.productId, isPrimary: true }).lean().exec()
-          : null;
-        const vendor = product
-          ? await this.vendorModel.findById(product.vendorId, { storeName: 1 }).lean().exec()
-          : null;
+    // Batch fetch all products
+    const productIds = variants.map(v => v.productId).filter(Boolean);
+    const [products, primaryImages] = await Promise.all([
+      this.productModel.find({ _id: { $in: productIds } }).lean().exec(),
+      this.imageModel.find({ productId: { $in: productIds }, isPrimary: true }).lean().exec(),
+    ]);
+    const productMap = new Map(products.map(p => [p._id.toString(), p]));
+    const imageMap = new Map(primaryImages.map(img => [img.productId.toString(), img]));
 
-        const enrichedProduct = product ? { ...product, images: primaryImage ? [primaryImage] : [], vendor } : null;
-        return { ...item, variant: { ...variant, product: enrichedProduct } };
-      }),
-    );
+    // Batch fetch all vendors
+    const vendorIds = [...new Set(products.map((p: any) => p.vendorId?.toString()).filter(Boolean))];
+    const vendors = await this.vendorModel.find({ _id: { $in: vendorIds } }, { storeName: 1 }).lean().exec();
+    const vendorMap = new Map(vendors.map(v => [v._id.toString(), v]));
+
+    return items.map(item => {
+      const variant = variantMap.get(item.productVariantId.toString());
+      if (!variant) return { ...item, variant: null };
+
+      const product = productMap.get((variant as any).productId?.toString());
+      const primaryImage = product ? imageMap.get((product as any)._id.toString()) : null;
+      const vendor = product ? vendorMap.get((product as any).vendorId?.toString()) : null;
+
+      const enrichedProduct = product
+        ? { ...product, images: primaryImage ? [primaryImage] : [], vendor }
+        : null;
+      return { ...item, variant: { ...variant, product: enrichedProduct } };
+    });
   }
 
   async getCart(userId: string): Promise<any> {
@@ -111,6 +127,25 @@ export class CartService {
       _id: new Types.ObjectId(itemId),
       cartId: new Types.ObjectId(cart._id.toString()),
     });
+    return this.getCart(userId);
+  }
+
+  async addCustomItem(userId: string, variantId: string, qty: number, customization: any) {
+    const variant = await this.variantModel.findById(variantId).lean().exec();
+    if (!variant) throw new NotFoundException('Product variant not found');
+
+    const cart = await this.getOrCreateCart(userId);
+    const cartId = new Types.ObjectId(cart._id.toString());
+
+    // Custom items always create a new entry (isCustom: true bypasses the unique dedup index)
+    await this.cartItemModel.create({
+      cartId,
+      productVariantId: new Types.ObjectId(variantId),
+      qty,
+      isCustom: true,
+      customization,
+    });
+
     return this.getCart(userId);
   }
 

@@ -8,12 +8,10 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { invoicesApi } from '@/lib/api';
 import { Invoice, InvoiceStatus, InvoiceStats } from '@/types';
 import { formatPrice, formatDate } from '@/lib/utils';
-import { StatusBadge } from '@/components/ui/StatusBadge';
 import {
   FileText, Download, Search, ChevronLeft, ChevronRight,
   TrendingUp, DollarSign, Receipt, Calendar,
 } from 'lucide-react';
-import Cookies from 'js-cookie';
 
 const STATUSES: InvoiceStatus[] = ['ISSUED', 'PAID', 'CANCELLED', 'REFUNDED'];
 
@@ -56,9 +54,8 @@ function AdminInvoicesContent() {
   };
 
   const handleDownload = async (inv: Invoice) => {
-    const token = Cookies.get('accessToken');
     const res = await fetch(`/api/invoices/${inv.id}/download`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: 'include',
     });
     if (!res.ok) return;
     const blob = await res.blob();

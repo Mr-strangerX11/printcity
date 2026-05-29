@@ -1,27 +1,9 @@
 version: '3.9'
 
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: ap_postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ap_user
-      POSTGRES_PASSWORD: ap_pass
-      POSTGRES_DB: ap_db
-    ports:
-      - '5432:5432'
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ap_user -d ap_db']
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   redis:
     image: redis:7-alpine
-    container_name: ap_redis
+    container_name: PrintCity_redis
     restart: unless-stopped
     ports:
       - '6379:6379'
@@ -37,18 +19,15 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: ap_api
+    container_name: PrintCity_api
     restart: unless-stopped
     ports:
       - '4000:4000'
     env_file:
-      - .env
+      - ./backend/.env
     environment:
-      DATABASE_URL: postgresql://ap_user:ap_pass@postgres:5432/ap_db
       REDIS_URL: redis://redis:6379
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
     volumes:
@@ -59,20 +38,20 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: ap_web
+    container_name: PrintCity_web
     restart: unless-stopped
     ports:
       - '3000:3000'
     env_file:
-      - .env
+      - ./frontend/.env.local
     environment:
-      NEXT_PUBLIC_API_URL: http://api:4000
+      NEXT_PUBLIC_API_URL: http://api:4000/api
     depends_on:
       - api
 
   nginx:
     image: nginx:1.25-alpine
-    container_name: ap_nginx
+    container_name: PrintCity_nginx
     restart: unless-stopped
     ports:
       - '80:80'
@@ -85,5 +64,4 @@ services:
       - web
 
 volumes:
-  postgres_data:
   redis_data:

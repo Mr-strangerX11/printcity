@@ -4,7 +4,7 @@ import { TicketStatus, TicketPriority } from '../../common/enums';
 
 export type SupportTicketDocument = SupportTicket & Document;
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class SupportTicket {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true }) userId: Types.ObjectId;
   @Prop({ required: true }) subject: string;

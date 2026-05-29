@@ -5,6 +5,7 @@ import { ReviewsService } from './reviews.service';
 import { Review, ReviewSchema } from './schemas/review.schema';
 import { OrderItem, OrderItemSchema } from '../orders/schemas/order-item.schema';
 import { Order, OrderSchema } from '../orders/schemas/order.schema';
+import { LoyaltyModule } from '../loyalty/loyalty.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { Order, OrderSchema } from '../orders/schemas/order.schema';
       { name: OrderItem.name, schema: OrderItemSchema },
       { name: Order.name, schema: OrderSchema },
     ]),
+    LoyaltyModule,
   ],
   controllers: [ReviewsController],
   providers: [ReviewsService],

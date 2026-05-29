@@ -79,6 +79,12 @@ export class PayoutsService {
     const start = new Date(periodStart);
     const end = new Date(periodEnd);
 
+    // Idempotency guard: reject if any payout already exists for this exact period
+    const existing = await this.payoutModel.findOne({ periodStart: start, periodEnd: end }).lean().exec();
+    if (existing) {
+      throw new BadRequestException(`Payouts for period ${periodStart} – ${periodEnd} have already been run.`);
+    }
+
     // Find all delivered+paid orders in the period
     const eligibleOrders = await this.orderModel
       .find({

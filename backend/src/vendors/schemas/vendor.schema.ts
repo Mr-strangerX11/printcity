@@ -4,7 +4,7 @@ import { VendorStatus } from '../../common/enums';
 
 export type VendorDocument = Vendor & Document;
 
-@Schema({ timestamps: true })
+@Schema({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class Vendor {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true, unique: true }) userId: Types.ObjectId;
   @Prop({ required: true }) storeName: string;

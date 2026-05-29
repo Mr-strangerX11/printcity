@@ -19,7 +19,7 @@ function KhaltiVerifyContent() {
       return;
     }
 
-    fetch(`${API}/api/payments/khalti/verify`, {
+    fetch(`${API}/payments/khalti/verify`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',

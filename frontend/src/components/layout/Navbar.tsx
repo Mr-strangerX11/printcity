@@ -151,11 +151,7 @@ export function Navbar() {
                 style={{ color: 'var(--text-body)' }}>
                 Products
               </Link>
-              <Link href="/vendors"
-                className="px-3 py-2 text-sm font-medium rounded-lg transition-colors hover:bg-[var(--hover-bg)]"
-                style={{ color: 'var(--text-body)' }}>
-                Vendors
-              </Link>
+            
               <Link href="/design-studio"
                 className="hidden lg:flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg text-purple-500 dark:text-purple-300 hover:bg-purple-500/10 transition-colors">
                 <Sparkles className="w-3.5 h-3.5" /> Custom Design
@@ -271,6 +267,7 @@ export function Navbar() {
                     <div className="px-4 py-3 mb-1" style={{ background: 'var(--hover-bg)', borderBottom: '1px solid var(--border-color)' }}>
                       <div className="flex items-center gap-2.5">
                         {user.avatar ? (
+                          // eslint-disable-next-line @next/next/no-img-element
                           <img src={user.avatar} alt={user.name} className="w-9 h-9 rounded-full object-cover flex-shrink-0 ring-2 ring-purple-500/30" />
                         ) : (
                           <div className="w-9 h-9 rounded-full bg-brand-gradient flex items-center justify-center text-white text-sm font-black flex-shrink-0">

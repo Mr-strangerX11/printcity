@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
-import { formatDate, formatPrice } from '@/lib/utils';
-import { Truck, Package, CheckCircle2, AlertCircle, RefreshCw, ExternalLink } from 'lucide-react';
+import { formatDate } from '@/lib/utils';
+import { Truck, RefreshCw } from 'lucide-react';
 
 const SHIPMENT_STATUSES = ['PENDING','LABEL_CREATED','PICKED_UP','IN_TRANSIT','OUT_FOR_DELIVERY','DELIVERED','RETURNED','FAILED'];
 

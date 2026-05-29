@@ -1,29 +1,23 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import { productsApi } from '@/lib/api';
-import { Product } from '@/types';
 import { formatPrice, formatDate } from '@/lib/utils';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { useProducts } from '@/hooks';
 import { toast } from 'sonner';
 
 export default function AdminProductsPage() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
-
-  const load = () => {
-    setLoading(true);
-    productsApi.list({ status: status || undefined, limit: 50 }).then(({ data }) => setProducts(data.data.items ?? [])).finally(() => setLoading(false));
-  };
-  useEffect(() => { load(); }, [status]);
+  const { data, loading, refetch } = useProducts({ status: status || undefined, limit: 50 });
+  const products = data?.items ?? [];
 
   const approve = async (id: string) => {
     try {
       await productsApi.update(id, { status: 'ACTIVE' });
       toast.success('Product approved');
-      load();
+      refetch();
     } catch { toast.error('Failed'); }
   };
 
@@ -31,7 +25,7 @@ export default function AdminProductsPage() {
     try {
       await productsApi.update(id, { status: 'REJECTED' });
       toast.success('Product rejected');
-      load();
+      refetch();
     } catch { toast.error('Failed'); }
   };
 

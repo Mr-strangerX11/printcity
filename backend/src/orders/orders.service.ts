@@ -3,9 +3,10 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { InjectModel, InjectConnection } from '@nestjs/mongoose';
+import { Model, Types, Connection } from 'mongoose';
 import { IsEnum } from 'class-validator';
 import { OrderStatus, PaymentStatus } from '../common/enums';
 import { Role, User, UserDocument } from '../user/schemas/user.schema';
@@ -14,6 +15,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { MailService } from '../mail/mail.service';
 import { InvoicesService } from '../invoices/invoices.service';
 import { CouponsService } from '../coupons/coupons.service';
+import { LoyaltyService } from '../loyalty/loyalty.service';
 import { Order, OrderDocument } from './schemas/order.schema';
 import { OrderItem, OrderItemDocument } from './schemas/order-item.schema';
 import { Vendor, VendorDocument } from '../vendors/schemas/vendor.schema';
@@ -42,6 +44,8 @@ export class UpdateOrderStatusDto {
 
 @Injectable()
 export class OrdersService {
+  private readonly logger = new Logger(OrdersService.name);
+
   constructor(
     @InjectModel(Order.name) private orderModel: Model<OrderDocument>,
     @InjectModel(OrderItem.name) private orderItemModel: Model<OrderItemDocument>,
@@ -51,11 +55,13 @@ export class OrdersService {
     @InjectModel(ProductImage.name) private imageModel: Model<ProductImageDocument>,
     @InjectModel(Payment.name) private paymentModel: Model<PaymentDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectConnection() private connection: Connection,
     private cartService: CartService,
     private notifications: NotificationsService,
     private mail: MailService,
     private invoicesService: InvoicesService,
     private couponsService: CouponsService,
+    private loyaltyService: LoyaltyService,
   ) {}
 
   async checkout(userId: string, dto: CheckoutDto) {
@@ -71,29 +77,37 @@ export class OrdersService {
       }
     }
 
-    const orderItemsData = await Promise.all(
-      cart.items.map(async (item) => {
-        const vendor = await this.vendorModel
-          .findById(item.variant!.product?.vendorId)
-          .lean()
-          .exec();
-        const price = Number(item.variant!.price) * item.qty;
-        const vendorCommission = price * (vendor?.commissionRate ?? 0.10);
-        const adminAmount = price - vendorCommission;
+    // Batch-fetch all vendors in one query to avoid N+1
+    const vendorIds = [...new Set(
+      cart.items
+        .map((item: any) => item.variant?.product?.vendorId?.toString())
+        .filter((id: unknown): id is string => Boolean(id)),
+    )];
+    const vendorDocs = await this.vendorModel
+      .find({ _id: { $in: vendorIds } })
+      .lean()
+      .exec();
+    const vendorMap = new Map(vendorDocs.map((v: any) => [v._id.toString(), v]));
 
-        return {
-          productId: new Types.ObjectId(item.variant!.product!._id.toString()),
-          variantId: new Types.ObjectId(item.variant!._id.toString()),
-          vendorId: new Types.ObjectId(item.variant!.product!.vendorId.toString()),
-          qty: item.qty,
-          price,
-          vendorCommission,
-          adminAmount,
-        };
-      }),
-    );
+    const orderItemsData = cart.items.map((item: any) => {
+      const vid = item.variant?.product?.vendorId?.toString() ?? '';
+      const vendor = vendorMap.get(vid);
+      const price = Number(item.variant!.price) * item.qty;
+      const vendorCommission = price * (vendor?.commissionRate ?? 0.10);
+      const adminAmount = price - vendorCommission;
 
-    const subtotal = orderItemsData.reduce((sum, i) => sum + i.price, 0);
+      return {
+        productId: new Types.ObjectId(item.variant!.product!._id.toString()),
+        variantId: new Types.ObjectId(item.variant!._id.toString()),
+        vendorId: new Types.ObjectId(item.variant!.product!.vendorId.toString()),
+        qty: item.qty,
+        price,
+        vendorCommission,
+        adminAmount,
+      };
+    });
+
+    const subtotal = orderItemsData.reduce((sum: number, i: { price: number }) => sum + i.price, 0);
     const uid = new Types.ObjectId(userId);
 
     // Validate coupon and compute discount (before order creation so totalAmount is correct)
@@ -125,21 +139,15 @@ export class OrdersService {
     });
 
     await this.orderItemModel.insertMany(
-      orderItemsData.map((item) => ({ ...item, orderId: order._id })),
+      orderItemsData.map((item: typeof orderItemsData[0]) => ({ ...item, orderId: order._id })),
     );
 
-    // Decrement stock
-    for (const item of cart.items) {
-      await this.variantModel.findByIdAndUpdate(item.variant!._id, {
-        $inc: { stock: -item.qty },
-      });
-    }
-
+    // Stock is decremented only when payment is confirmed (see confirmPayment)
     await this.cartService.clearCart(userId);
 
-    // Record coupon usage so usage count is incremented and per-user limit is enforced
+    // Record coupon usage — awaited so double-use is prevented atomically
     if (appliedCouponCode) {
-      this.couponsService.applyCoupon(appliedCouponCode, userId, order._id.toString(), subtotal).catch(() => null);
+      await this.couponsService.applyCoupon(appliedCouponCode, userId, order._id.toString(), subtotal);
     }
 
     await this.notifications.create(
@@ -149,33 +157,43 @@ export class OrdersService {
       `Your order #${order._id.toString().slice(-8).toUpperCase()} has been placed.`,
     );
 
-    this.sendOrderEmails(userId, order.toObject(), cart.items, orderItemsData).catch(() => null);
+    this.sendOrderEmails(userId, order.toObject(), cart.items, orderItemsData).catch((err) => {
+      this.logger.warn(`Order confirmation email failed for order ${order._id}: ${err?.message}`);
+    });
 
     const orderItems = await this.orderItemModel.find({ orderId: order._id }).lean().exec();
     return { ...order.toObject(), items: orderItems };
   }
 
   private async sendOrderEmails(userId: string, order: any, cartItems: any[], itemsData: any[]) {
-    const enrichedItems = await Promise.all(
-      cartItems.map(async (cartItem, i) => {
-        const data = itemsData[i];
-        const vendor = await this.vendorModel
-          .findById(cartItem.variant?.product?.vendorId)
-          .lean()
-          .exec();
-        return {
-          productTitle: cartItem.variant?.product?.title ?? 'Product',
-          variantLabel: [cartItem.variant?.size, cartItem.variant?.color].filter(Boolean).join(' · '),
-          storeName: vendor?.storeName ?? '—',
-          vendorId: data.vendorId.toString(),
-          vendorUserId: vendor?.userId?.toString(),
-          qty: cartItem.qty,
-          price: data.price,
-          vendorCommission: data.vendorCommission,
-          adminAmount: data.adminAmount,
-        };
-      }),
-    );
+    // Batch-fetch all vendors in one query to avoid N+1 in email sending
+    const emailVendorIds = [...new Set(
+      cartItems
+        .map((item) => item.variant?.product?.vendorId?.toString())
+        .filter((id): id is string => Boolean(id)),
+    )];
+    const emailVendorDocs = await this.vendorModel
+      .find({ _id: { $in: emailVendorIds } })
+      .lean()
+      .exec();
+    const emailVendorMap = new Map(emailVendorDocs.map((v) => [v._id.toString(), v]));
+
+    const enrichedItems = cartItems.map((cartItem, i) => {
+      const data = itemsData[i];
+      const evid = cartItem.variant?.product?.vendorId?.toString() ?? '';
+      const vendor = emailVendorMap.get(evid);
+      return {
+        productTitle: cartItem.variant?.product?.title ?? 'Product',
+        variantLabel: [cartItem.variant?.size, cartItem.variant?.color].filter(Boolean).join(' · '),
+        storeName: vendor?.storeName ?? '—',
+        vendorId: data.vendorId.toString(),
+        vendorUserId: vendor?.userId?.toString(),
+        qty: cartItem.qty,
+        price: data.price,
+        vendorCommission: data.vendorCommission,
+        adminAmount: data.adminAmount,
+      };
+    });
 
     const customer = await this.userModel.findById(userId).lean().exec();
 
@@ -215,21 +233,43 @@ export class OrdersService {
   }
 
   async getStats() {
-    const [totalOrders, pendingOrders, deliveredOrders, revenueResult] = await Promise.all([
-      this.orderModel.countDocuments(),
-      this.orderModel.countDocuments({ orderStatus: OrderStatus.PENDING }),
-      this.orderModel.countDocuments({ orderStatus: OrderStatus.DELIVERED }),
-      this.orderModel.aggregate([
-        { $match: { paymentStatus: PaymentStatus.PAID } },
-        { $group: { _id: null, total: { $sum: '$totalAmount' } } },
-      ]),
-    ]);
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const [totalOrders, pendingOrders, deliveredOrders, revenueResult, avgResult, byStatusResult, monthlyCount] =
+      await Promise.all([
+        this.orderModel.countDocuments(),
+        this.orderModel.countDocuments({ orderStatus: OrderStatus.PENDING }),
+        this.orderModel.countDocuments({ orderStatus: OrderStatus.DELIVERED }),
+        this.orderModel.aggregate([
+          { $match: { paymentStatus: PaymentStatus.PAID } },
+          { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+        ]),
+        this.orderModel.aggregate([
+          { $group: { _id: null, avg: { $avg: '$totalAmount' } } },
+        ]),
+        this.orderModel.aggregate([
+          { $group: { _id: '$orderStatus', count: { $sum: 1 } } },
+        ]),
+        this.orderModel.countDocuments({ createdAt: { $gte: startOfMonth } }),
+      ]);
+
+    const byStatus: Record<string, number> = {};
+    for (const { _id, count } of byStatusResult) {
+      if (_id) byStatus[_id] = count;
+    }
 
     return {
       totalOrders,
+      total: totalOrders,
       pendingOrders,
+      pending: pendingOrders,
       deliveredOrders,
+      delivered: deliveredOrders,
       totalRevenue: Number(revenueResult[0]?.total ?? 0),
+      avgOrderValue: Math.round(Number(avgResult[0]?.avg ?? 0)),
+      byStatus,
+      newThisMonth: monthlyCount,
     };
   }
 
@@ -250,15 +290,29 @@ export class OrdersService {
       this.orderModel.countDocuments(filter),
     ]);
 
-    const items = await Promise.all(
-      orders.map(async (order) => {
-        const [orderItems, payment] = await Promise.all([
-          this.orderItemModel.find({ orderId: order._id }).lean().exec(),
-          this.paymentModel.findOne({ orderId: order._id }).lean().exec(),
-        ]);
-        return { ...order, items: orderItems, payment };
-      }),
-    );
+    // Batch-fetch order items and payments with $in — eliminates N+1 (2N queries → 2 queries)
+    const orderIds = orders.map(o => o._id);
+    const [allItems, allPayments] = await Promise.all([
+      this.orderItemModel.find({ orderId: { $in: orderIds } }).lean().exec(),
+      this.paymentModel.find({ orderId: { $in: orderIds } }).lean().exec(),
+    ]);
+
+    const itemsByOrder = new Map<string, typeof allItems>();
+    for (const item of allItems) {
+      const key = item.orderId.toString();
+      if (!itemsByOrder.has(key)) itemsByOrder.set(key, []);
+      itemsByOrder.get(key)!.push(item);
+    }
+    const paymentByOrder = new Map<string, typeof allPayments[0]>();
+    for (const p of allPayments) {
+      paymentByOrder.set(p.orderId.toString(), p);
+    }
+
+    const items = orders.map(order => ({
+      ...order,
+      items: itemsByOrder.get(order._id.toString()) ?? [],
+      payment: paymentByOrder.get(order._id.toString()) ?? null,
+    }));
 
     return { items, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } };
   }
@@ -301,6 +355,17 @@ export class OrdersService {
     }
     order.orderStatus = OrderStatus.CANCELLED;
     const updated = await order.save();
+
+    // Restore stock if payment was already confirmed (stock was decremented at payment time)
+    if (order.paymentStatus === PaymentStatus.PAID) {
+      const items = await this.orderItemModel.find({ orderId: new Types.ObjectId(id) }).lean().exec();
+      await Promise.all(
+        items.map(item =>
+          this.variantModel.findByIdAndUpdate(item.variantId, { $inc: { stock: item.qty } }).exec(),
+        ),
+      );
+    }
+
     await this.notifications.create(userId, 'ORDER_STATUS', 'Order Cancelled', `Your order #${id.slice(-8).toUpperCase()} has been cancelled.`);
     return updated;
   }
@@ -323,6 +388,15 @@ export class OrdersService {
 
     if (status === OrderStatus.DELIVERED && order.paymentStatus === PaymentStatus.PAID) {
       await this.accrueCommissions(id);
+
+      // Award 1 loyalty point per rupee spent (non-critical, don't block)
+      this.loyaltyService.awardPoints(
+        order.userId.toString(),
+        Math.floor(Number(order.totalAmount)),
+        'PURCHASE',
+        `Points for Order #${id.slice(-8).toUpperCase()}`,
+        id,
+      ).catch(() => {});
     }
 
     await this.notifications.create(
@@ -336,13 +410,51 @@ export class OrdersService {
   }
 
   async confirmPayment(orderId: string) {
-    const order = await this.orderModel.findByIdAndUpdate(
-      orderId,
-      { paymentStatus: PaymentStatus.PAID, orderStatus: OrderStatus.CONFIRMED },
-      { new: true },
-    ).exec();
+    const before = await this.orderModel.findById(orderId).lean().exec();
+    if (!before) return null;
 
-    if (order && order.orderStatus === OrderStatus.DELIVERED) {
+    // Already paid — idempotent, skip
+    if (before.paymentStatus === PaymentStatus.PAID) {
+      return this.orderModel.findById(orderId).exec();
+    }
+
+    const session = await this.connection.startSession();
+    let order: any = null;
+    try {
+      await session.withTransaction(async () => {
+        const update: any = { paymentStatus: PaymentStatus.PAID };
+        if (before.orderStatus === OrderStatus.PENDING) {
+          update.orderStatus = OrderStatus.CONFIRMED;
+        }
+
+        order = await this.orderModel.findByIdAndUpdate(orderId, update, { new: true, session }).exec();
+
+        // Atomic stock decrement inside transaction — only decrements if stock >= qty
+        const items = await this.orderItemModel.find({ orderId: new Types.ObjectId(orderId) }, null, { session }).lean().exec();
+        const stockResults = await Promise.all(
+          items.map(item =>
+            this.variantModel.findOneAndUpdate(
+              { _id: item.variantId, stock: { $gte: item.qty } },
+              { $inc: { stock: -item.qty } },
+              { new: true, session },
+            ).exec(),
+          ),
+        );
+
+        const outOfStockItems = items.filter((_, i) => !stockResults[i]);
+        if (outOfStockItems.length > 0) {
+          // Log shortage but don't abort — payment already received; fulfillment team handles manually
+          this.logger.error(
+            `STOCK_SHORTAGE on confirmPayment: order=${orderId} variants=${outOfStockItems.map(i => i.variantId).join(',')}`,
+          );
+        }
+      });
+    } finally {
+      session.endSession();
+    }
+
+    // Accrue commissions if already DELIVERED (pre-paid scenarios) or now confirmed
+    if (order && (before.orderStatus === OrderStatus.DELIVERED || order.orderStatus === OrderStatus.DELIVERED)) {
       await this.accrueCommissions(orderId);
     }
 

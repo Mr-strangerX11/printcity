@@ -4,7 +4,7 @@ import { PrintJobStatus } from '../../common/enums';
 
 export type PrintJobDocument = PrintJob & Document;
 
-@Schema({ timestamps: true })
+({ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } })
 export class PrintJob {
   @Prop({ type: Types.ObjectId, ref: 'Order', required: true, unique: true }) orderId: Types.ObjectId;
   @Prop({ type: Types.ObjectId, ref: 'User', default: null }) assignedTo?: Types.ObjectId;

@@ -19,7 +19,7 @@ export class UploadsController {
 
   @Get('sign')
   getSignature(@Query('folder') folder?: string) {
-    return this.uploadsService.generateSignature(folder ?? 'ap');
+    return this.uploadsService.generateSignature(folder ?? 'PrintCity');
   }
 
   @Post('file')

@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
-import { Printer, CheckCircle2, AlertCircle, Clock, RefreshCw, ChevronDown } from 'lucide-react';
+import { Printer, CheckCircle2, AlertCircle, Clock, RefreshCw } from 'lucide-react';
 
 type PrintJob = any;
 type QCJob = any;
@@ -52,11 +52,6 @@ export default function ProductionPage() {
 
   const updateQCStatus = async (id: string, status: string) => {
     await api.patch(`/production/qc/${id}`, { status });
-    fetch();
-  };
-
-  const createPrintJob = async (orderId: string) => {
-    await api.post(`/production/print-jobs/${orderId}`);
     fetch();
   };
 

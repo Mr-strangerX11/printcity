@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
-import { api } from '@/lib/api';
+import React, { useState } from 'react';
+import { couponsApi } from '@/lib/api';
+import { useCoupons, useCouponStats } from '@/hooks';
 import { formatDate, formatPrice } from '@/lib/utils';
 import { Tag, Plus, ToggleLeft, ToggleRight, RefreshCw, Trash2, Percent, DollarSign } from 'lucide-react';
-
-type Coupon = any;
 
 const COUPON_TYPES = ['PERCENTAGE', 'FIXED', 'FREE_SHIPPING'];
 
@@ -15,44 +14,32 @@ const emptyForm = {
 };
 
 export default function CouponsPage() {
-  const [coupons, setCoupons] = useState<Coupon[]>([]);
-  const [stats, setStats] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: couponsData, loading, refetch } = useCoupons();
+  const coupons = couponsData?.items ?? [];
+  const { data: stats, refetch: refetchStats } = useCouponStats();
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ ...emptyForm });
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [c, s] = await Promise.all([
-        api.get('/coupons'),
-        api.get('/coupons/stats'),
-      ]);
-      setCoupons(c.data.data?.items ?? c.data.data ?? []);
-      setStats(s.data.data);
-    } finally { setLoading(false); }
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
+  const invalidate = () => { refetch(); refetchStats(); };
 
   const toggle = async (id: string, current: boolean) => {
-    await api.patch(`/coupons/${id}`, { isActive: !current });
-    load();
+    await couponsApi.update(id, { isActive: !current });
+    invalidate();
   };
 
   const remove = async (id: string) => {
     if (!confirm('Delete this coupon?')) return;
     setDeleting(id);
-    try { await api.delete(`/coupons/${id}`); load(); }
+    try { await couponsApi.remove(id); invalidate(); }
     finally { setDeleting(null); }
   };
 
   const create = async () => {
     setSaving(true);
     try {
-      await api.post('/coupons', {
+      await couponsApi.create({
         ...form,
         value: Number(form.value),
         minOrderAmount: form.minOrderAmount ? Number(form.minOrderAmount) : undefined,
@@ -62,7 +49,7 @@ export default function CouponsPage() {
       });
       setShowCreate(false);
       setForm({ ...emptyForm });
-      load();
+      invalidate();
     } finally { setSaving(false); }
   };
 
@@ -74,7 +61,7 @@ export default function CouponsPage() {
           <p className="text-sm text-gray-500 mt-0.5">{coupons.length} coupons total</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={load} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 border border-gray-200 rounded-xl px-3 py-2">
+          <button onClick={invalidate} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 border border-gray-200 rounded-xl px-3 py-2">
             <RefreshCw className="w-4 h-4" />
           </button>
           <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 text-sm font-semibold bg-violet-600 text-white rounded-xl px-4 py-2 hover:bg-violet-700">
@@ -89,7 +76,7 @@ export default function CouponsPage() {
           {[
             { label: 'Total Coupons', value: stats.total ?? coupons.length, color: 'bg-violet-50', text: 'text-violet-600' },
             { label: 'Active', value: stats.active ?? coupons.filter((c: any) => c.isActive).length, color: 'bg-green-50', text: 'text-green-600' },
-            { label: 'Times Used', value: stats.totalUsages ?? 0, color: 'bg-blue-50', text: 'text-blue-600' },
+            { label: 'Times Used', value: stats.totalUsage ?? 0, color: 'bg-blue-50', text: 'text-blue-600' },
             { label: 'Total Saved', value: formatPrice(stats.totalDiscount ?? 0), color: 'bg-orange-50', text: 'text-orange-600' },
           ].map(s => (
             <div key={s.label} className="bg-white rounded-2xl border border-gray-100 p-5">

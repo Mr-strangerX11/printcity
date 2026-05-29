@@ -48,7 +48,7 @@ export default function AdminImportPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'ap_products_template.csv';
+    a.download = 'PrintCity_products_template.csv';
     a.click();
     URL.revokeObjectURL(url);
   };
