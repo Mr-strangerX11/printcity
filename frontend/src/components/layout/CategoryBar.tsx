@@ -166,7 +166,7 @@ export function CategoryBar() {
                   {cat.subcategories.map((sub) => (
                     <Link
                       key={sub}
-                      href={`/products?category=${cat.slug}&sub=${toSlug(sub)}`}
+                      href={`/services/${toSlug(sub)}`}
                       className="block px-4 py-2 text-sm whitespace-nowrap transition-colors hover:bg-[var(--hover-bg)] hover:text-purple-500 dark:hover:text-purple-400"
                       style={{ color: 'var(--text-body)' }}
                     >
