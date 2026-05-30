@@ -408,6 +408,137 @@ html { scroll-behavior: smooth; }
 .dark .border-red-100    { border-color: rgba(239,68,68,0.2) !important; }
 .dark .border-yellow-100 { border-color: rgba(234,179,8,0.2) !important; }
 
+/* ── Semantic colour tokens ───────────────────────────────────────── */
+:root {
+  /* Success */
+  --color-success:        #059669;
+  --color-success-light:  rgba(5,150,105,0.10);
+  --color-success-border: rgba(5,150,105,0.25);
+  --color-success-text:   #065f46;
+
+  /* Warning */
+  --color-warning:        #d97706;
+  --color-warning-light:  rgba(217,119,6,0.10);
+  --color-warning-border: rgba(217,119,6,0.25);
+  --color-warning-text:   #92400e;
+
+  /* Danger */
+  --color-danger:         #dc2626;
+  --color-danger-light:   rgba(220,38,38,0.10);
+  --color-danger-border:  rgba(220,38,38,0.25);
+  --color-danger-text:    #991b1b;
+
+  /* Info */
+  --color-info:           #2563eb;
+  --color-info-light:     rgba(37,99,235,0.10);
+  --color-info-border:    rgba(37,99,235,0.25);
+  --color-info-text:      #1e40af;
+
+  /* Brand */
+  --color-brand:          #7C3AED;
+  --color-brand-light:    rgba(124,58,237,0.10);
+  --color-brand-border:   rgba(124,58,237,0.25);
+
+  /* Shadow system */
+  --shadow-xs:  0 1px 2px rgba(0,0,0,0.05);
+  --shadow-sm:  0 2px 4px rgba(0,0,0,0.07);
+  --shadow-md:  0 4px 12px rgba(0,0,0,0.09);
+  --shadow-lg:  0 8px 24px rgba(0,0,0,0.12);
+  --shadow-xl:  0 16px 48px rgba(0,0,0,0.16);
+  --shadow-2xl: 0 24px 72px rgba(0,0,0,0.20);
+
+  /* Sidebar */
+  --sidebar-w: 240px;
+  --sidebar-w-collapsed: 64px;
+  --sidebar-bg: #FFFFFF;
+  --sidebar-border: rgba(0,0,0,0.07);
+  --sidebar-item-hover: rgba(124,58,237,0.06);
+  --sidebar-item-active-bg: rgba(124,58,237,0.10);
+  --sidebar-item-active-text: #7C3AED;
+}
+
+.dark {
+  --color-success-text:   #6ee7b7;
+  --color-warning-text:   #fcd34d;
+  --color-danger-text:    #fca5a5;
+  --color-info-text:      #93c5fd;
+
+  --shadow-xs:  0 1px 2px rgba(0,0,0,0.25);
+  --shadow-sm:  0 2px 4px rgba(0,0,0,0.35);
+  --shadow-md:  0 4px 12px rgba(0,0,0,0.45);
+  --shadow-lg:  0 8px 24px rgba(0,0,0,0.55);
+  --shadow-xl:  0 16px 48px rgba(0,0,0,0.65);
+  --shadow-2xl: 0 24px 72px rgba(0,0,0,0.75);
+
+  --sidebar-bg: #0D1422;
+  --sidebar-border: rgba(255,255,255,0.07);
+  --sidebar-item-hover: rgba(124,58,237,0.08);
+  --sidebar-item-active-bg: rgba(124,58,237,0.15);
+  --sidebar-item-active-text: #A78BFA;
+}
+
+/* ── Progress bar ─────────────────────────────────────────────────── */
+@keyframes progressStripe {
+  0%   { background-position: 0 0; }
+  100% { background-position: 40px 0; }
+}
+.progress-stripe {
+  background-image: linear-gradient(
+    -45deg,
+    rgba(255,255,255,0.15) 25%,
+    transparent 25%,
+    transparent 50%,
+    rgba(255,255,255,0.15) 50%,
+    rgba(255,255,255,0.15) 75%,
+    transparent 75%,
+    transparent
+  );
+  background-size: 40px 40px;
+  animation: progressStripe 1s linear infinite;
+}
+
+/* ── Skeleton shimmer ─────────────────────────────────────────────── */
+@keyframes skeletonShimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface-alt) 25%,
+    var(--hover-bg) 50%,
+    var(--surface-alt) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.5s ease-in-out infinite;
+  border-radius: 0.5rem;
+}
+
+/* ── Toast ────────────────────────────────────────────────────────── */
+[data-sonner-toaster] [data-type='success'] { border-left: 3px solid var(--color-success); }
+[data-sonner-toaster] [data-type='error']   { border-left: 3px solid var(--color-danger); }
+[data-sonner-toaster] [data-type='warning'] { border-left: 3px solid var(--color-warning); }
+[data-sonner-toaster] [data-type='info']    { border-left: 3px solid var(--color-info); }
+
+/* ── Status dot ───────────────────────────────────────────────────── */
+.status-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Sidebar transition ───────────────────────────────────────────── */
+.sidebar-transition { transition: width 0.2s cubic-bezier(0.4,0,0.2,1), transform 0.2s cubic-bezier(0.4,0,0.2,1); }
+
+/* ── Page transition ──────────────────────────────────────────────── */
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.page-in { animation: pageIn 0.25s ease-out both; }
+
 /* ── Dashboard / admin input shared style ─────────────────────────── */
 .theme-input {
   background: var(--input-bg);

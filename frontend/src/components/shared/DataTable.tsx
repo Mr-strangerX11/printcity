@@ -1,176 +1,255 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useMemo } from 'react';
+import { Search, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { SkeletonLoader } from './SkeletonLoader';
 
 export interface Column<T> {
   key: string;
-  label: string;
-  render?: (row: T) => React.ReactNode;
-  className?: string;
+  header: string;
+  render?: (row: T, i: number) => React.ReactNode;
+  sortable?: boolean;
+  width?: string;
+  align?: 'left' | 'center' | 'right';
+  hidden?: boolean;
 }
 
-export interface DataTableProps<T> {
-  columns: Column<T>[];
+interface DataTableProps<T> {
   data: T[];
+  columns: Column<T>[];
   loading?: boolean;
-  emptyMessage?: string;
-  keyExtractor: (row: T) => string;
+  searchable?: boolean;
+  searchPlaceholder?: string;
+  searchKeys?: (keyof T)[];
+  pageSize?: number;
+  emptyTitle?: string;
+  emptyDescription?: string;
+  emptyIcon?: React.ReactNode;
+  actions?: React.ReactNode;
   onRowClick?: (row: T) => void;
-  selectedIds?: string[];
-  onSelect?: (id: string) => void;
-  onSelectAll?: () => void;
-  bulkActions?: React.ReactNode;
+  rowKey?: (row: T) => string;
+  filters?: React.ReactNode;
 }
 
-function EmptyState({ message }: { message: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-      <div className="w-14 h-14 rounded-2xl bg-gray-50 flex items-center justify-center mb-4">
-        <svg
-          className="w-7 h-7 text-gray-300"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={1.5}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v.776"
-          />
-        </svg>
-      </div>
-      <p className="text-sm font-medium text-gray-500">{message}</p>
-    </div>
-  );
-}
+type SortDir = 'asc' | 'desc' | null;
 
-export default function DataTable<T>({
-  columns,
+export function DataTable<T extends Record<string, any>>({
   data,
+  columns,
   loading = false,
-  emptyMessage = 'No data found.',
-  keyExtractor,
+  searchable = true,
+  searchPlaceholder = 'Search…',
+  searchKeys,
+  pageSize = 10,
+  emptyTitle = 'No data',
+  emptyDescription = 'Nothing to show here yet.',
+  emptyIcon,
+  actions,
   onRowClick,
-  selectedIds = [],
-  onSelect,
-  onSelectAll,
-  bulkActions,
+  rowKey,
+  filters,
 }: DataTableProps<T>) {
-  const hasSelection = !!onSelect;
-  const allSelected = data.length > 0 && data.every((row) => selectedIds.includes(keyExtractor(row)));
-  const someSelected = selectedIds.length > 0;
+  const [query, setQuery] = useState('');
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>(null);
+  const [page, setPage] = useState(1);
+
+  const visibleCols = columns.filter(c => !c.hidden);
+
+  const filtered = useMemo(() => {
+    if (!query.trim()) return data;
+    const q = query.toLowerCase();
+    const keys = searchKeys ?? (Object.keys(data[0] ?? {}) as (keyof T)[]);
+    return data.filter(row =>
+      keys.some(k => String(row[k] ?? '').toLowerCase().includes(q))
+    );
+  }, [data, query, searchKeys]);
+
+  const sorted = useMemo(() => {
+    if (!sortKey || !sortDir) return filtered;
+    return [...filtered].sort((a, b) => {
+      const cmp = String(a[sortKey] ?? '').localeCompare(String(b[sortKey] ?? ''), undefined, { numeric: true });
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+  }, [filtered, sortKey, sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const paginated = sorted.slice((page - 1) * pageSize, page * pageSize);
+
+  const handleSort = (key: string) => {
+    if (sortKey !== key) { setSortKey(key); setSortDir('asc'); }
+    else if (sortDir === 'asc') setSortDir('desc');
+    else { setSortKey(null); setSortDir(null); }
+    setPage(1);
+  };
+
+  if (loading) {
+    return (
+      <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] overflow-hidden">
+        <div className="p-4 border-b border-[var(--border-color)]">
+          <div className="skeleton h-9 w-56 rounded-xl" />
+        </div>
+        <div className="divide-y divide-[var(--border-color)]">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="flex items-center gap-4 px-5 py-4">
+              <div className="skeleton h-8 w-8 rounded-xl flex-shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="skeleton h-3.5 w-1/3" />
+                <div className="skeleton h-3 w-1/4" />
+              </div>
+              <div className="skeleton h-6 w-20 rounded-full" />
+              <div className="skeleton h-3.5 w-24" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-      {/* Bulk action bar */}
-      {someSelected && bulkActions && (
-        <div className="flex items-center justify-between gap-3 px-4 py-3 bg-indigo-50 border-b border-indigo-100">
-          <span className="text-sm font-medium text-indigo-700">
-            {selectedIds.length} item{selectedIds.length !== 1 ? 's' : ''} selected
-          </span>
-          <div className="flex items-center gap-2">{bulkActions}</div>
+    <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] overflow-hidden" style={{ boxShadow: 'var(--shadow-sm)' }}>
+      {/* Toolbar */}
+      {(searchable || actions || filters) && (
+        <div className="p-4 border-b border-[var(--border-color)] flex flex-col sm:flex-row gap-3">
+          {searchable && (
+            <div className="relative flex-1 max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-faint)] pointer-events-none" />
+              <input
+                value={query}
+                onChange={e => { setQuery(e.target.value); setPage(1); }}
+                placeholder={searchPlaceholder}
+                className={cn(
+                  'w-full pl-9 pr-4 py-2 text-sm rounded-xl border transition-all',
+                  'bg-[var(--input-bg)] border-[var(--input-border)] text-[var(--text-heading)]',
+                  'placeholder:text-[var(--text-faint)]',
+                  'focus:outline-none focus:ring-2 focus:ring-purple-500/25 focus:border-purple-500/50',
+                )}
+              />
+            </div>
+          )}
+          {filters && <div className="flex items-center gap-2">{filters}</div>}
+          {actions && <div className="flex items-center gap-2 sm:ml-auto">{actions}</div>}
         </div>
       )}
 
+      {/* Table */}
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          {/* Header */}
+        <table className="w-full text-sm min-w-[600px]">
           <thead>
-            <tr className="border-b border-gray-100 bg-gray-50/50 sticky top-0 z-10">
-              {hasSelection && (
-                <th className="w-10 px-4 py-3 text-left">
-                  <input
-                    type="checkbox"
-                    checked={allSelected}
-                    onChange={onSelectAll}
-                    className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                    aria-label="Select all rows"
-                  />
-                </th>
-              )}
-              {columns.map((col) => (
+            <tr style={{ background: 'var(--surface-alt)', borderBottom: '1px solid var(--border-color)' }}>
+              {visibleCols.map(col => (
                 <th
                   key={col.key}
                   className={cn(
-                    'px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap',
-                    col.className,
+                    'px-5 py-3 text-xs font-bold uppercase tracking-wider text-[var(--text-faint)] whitespace-nowrap select-none',
+                    col.sortable && 'cursor-pointer hover:text-[var(--text-muted)] transition-colors',
+                    col.align === 'right' && 'text-right',
+                    col.align === 'center' && 'text-center',
+                    'text-left',
                   )}
+                  style={{ width: col.width }}
+                  onClick={() => col.sortable && handleSort(col.key)}
                 >
-                  {col.label}
+                  <span className="inline-flex items-center gap-1">
+                    {col.header}
+                    {col.sortable && (
+                      sortKey === col.key
+                        ? sortDir === 'asc'
+                          ? <ChevronUp className="w-3 h-3 text-purple-500" />
+                          : <ChevronDown className="w-3 h-3 text-purple-500" />
+                        : <ChevronUp className="w-3 h-3 opacity-25" />
+                    )}
+                  </span>
                 </th>
               ))}
             </tr>
           </thead>
-
-          {/* Body */}
-          <tbody className="divide-y divide-gray-50">
-            {loading ? (
+          <tbody className="divide-y divide-[var(--border-color)]">
+            {paginated.length === 0 ? (
               <tr>
-                <td colSpan={columns.length + (hasSelection ? 1 : 0)} className="p-0">
-                  <SkeletonLoader variant="row" count={5} />
+                <td colSpan={visibleCols.length} className="px-5 py-16 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-[var(--surface-alt)] text-[var(--text-faint)]">
+                      {emptyIcon ?? <Search className="w-6 h-6" />}
+                    </div>
+                    <div>
+                      <p className="font-bold text-sm text-[var(--text-heading)]">
+                        {query ? 'No results found' : emptyTitle}
+                      </p>
+                      <p className="text-xs text-[var(--text-faint)] mt-0.5">
+                        {query ? `No matches for "${query}"` : emptyDescription}
+                      </p>
+                    </div>
+                  </div>
                 </td>
               </tr>
-            ) : data.length === 0 ? (
-              <tr>
-                <td colSpan={columns.length + (hasSelection ? 1 : 0)}>
-                  <EmptyState message={emptyMessage} />
-                </td>
-              </tr>
-            ) : (
-              data.map((row) => {
-                const id = keyExtractor(row);
-                const isSelected = selectedIds.includes(id);
-
-                return (
-                  <tr
-                    key={id}
-                    onClick={onRowClick ? () => onRowClick(row) : undefined}
+            ) : paginated.map((row, i) => (
+              <tr
+                key={rowKey ? rowKey(row) : i}
+                onClick={() => onRowClick?.(row)}
+                className={cn(
+                  'transition-colors hover:bg-[var(--hover-bg)]',
+                  onRowClick && 'cursor-pointer',
+                )}
+              >
+                {visibleCols.map(col => (
+                  <td
+                    key={col.key}
                     className={cn(
-                      'transition-colors',
-                      onRowClick ? 'cursor-pointer hover:bg-gray-50' : 'hover:bg-gray-50/60',
-                      isSelected && 'bg-indigo-50/40',
+                      'px-5 py-3.5 text-[var(--text-body)] whitespace-nowrap',
+                      col.align === 'right' && 'text-right',
+                      col.align === 'center' && 'text-center',
                     )}
                   >
-                    {hasSelection && (
-                      <td className="w-10 px-4 py-3">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={(e) => {
-                            e.stopPropagation();
-                            onSelect!(id);
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                          className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                          aria-label={`Select row ${id}`}
-                        />
-                      </td>
-                    )}
-                    {columns.map((col) => (
-                      <td
-                        key={col.key}
-                        className={cn(
-                          'px-4 py-3 text-gray-700 whitespace-nowrap',
-                          col.className,
-                        )}
-                      >
-                        {col.render
-                          ? col.render(row)
-                          : String((row as Record<string, unknown>)[col.key] ?? '')}
-                      </td>
-                    ))}
-                  </tr>
-                );
-              })
-            )}
+                    {col.render ? col.render(row, (page - 1) * pageSize + i) : String(row[col.key] ?? '—')}
+                  </td>
+                ))}
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
+
+      {/* Pagination */}
+      {sorted.length > pageSize && (
+        <div
+          className="px-5 py-3.5 flex items-center justify-between gap-4"
+          style={{ borderTop: '1px solid var(--border-color)', background: 'var(--surface-alt)' }}
+        >
+          <p className="text-xs text-[var(--text-faint)]">
+            Showing <span className="font-semibold text-[var(--text-body)]">{(page - 1) * pageSize + 1}–{Math.min(page * pageSize, sorted.length)}</span> of <span className="font-semibold text-[var(--text-body)]">{sorted.length}</span>
+          </p>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+              className="p-1.5 rounded-lg hover:bg-[var(--hover-bg)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              <ChevronLeft className="w-4 h-4 text-[var(--text-muted)]" />
+            </button>
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let p = i + 1;
+              if (totalPages > 5) {
+                if (page <= 3) p = i + 1;
+                else if (page >= totalPages - 2) p = totalPages - 4 + i;
+                else p = page - 2 + i;
+              }
+              return (
+                <button key={p} onClick={() => setPage(p)}
+                  className={cn(
+                    'w-7 h-7 rounded-lg text-xs font-semibold transition-all',
+                    p === page
+                      ? 'bg-purple-600 text-white shadow-sm'
+                      : 'text-[var(--text-muted)] hover:bg-[var(--hover-bg)]',
+                  )}>
+                  {p}
+                </button>
+              );
+            })}
+            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+              className="p-1.5 rounded-lg hover:bg-[var(--hover-bg)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              <ChevronRight className="w-4 h-4 text-[var(--text-muted)]" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
-export { DataTable };
