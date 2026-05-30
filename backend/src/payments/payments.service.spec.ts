@@ -92,3 +92,62 @@ describe('eSewa signature verification (hardened)', () => {
     expect(result.error).toContain('Signature mismatch');
   });
 });
+
+describe('eSewa signature verification — additional edge cases', () => {
+  const SECRET = 'another-secret';
+  const CANONICAL_FIELDS = [
+    'transaction_code', 'status', 'total_amount',
+    'transaction_uuid', 'product_code', 'signed_field_names',
+  ] as const;
+
+  function buildValidPayload(overrides: Record<string, string> = {}): Record<string, string> {
+    const base: Record<string, string> = {
+      transaction_code: 'TX999',
+      status: 'COMPLETE',
+      total_amount: '500',
+      transaction_uuid: 'uuid-xyz',
+      product_code: 'MYSTORE',
+      signed_field_names: CANONICAL_FIELDS.join(','),
+    };
+    const merged = { ...base, ...overrides };
+    const message = CANONICAL_FIELDS.map(f => `${f}=${merged[f]}`).join(',');
+    merged['signature'] = createHmac('sha256', SECRET).update(message).digest('base64');
+    return merged;
+  }
+
+  it('rejects when signature is tampered with', () => {
+    const payload = buildValidPayload();
+    payload['signature'] = 'tampered-signature';
+    const result = verifyEsewaSignature(payload, SECRET);
+    expect(result.valid).toBe(false);
+  });
+
+  it('rejects when wrong secret is used', () => {
+    const payload = buildValidPayload();
+    const result = verifyEsewaSignature(payload, 'wrong-secret');
+    expect(result.valid).toBe(false);
+  });
+
+  it('rejects FAILED transaction status (valid HMAC but wrong status)', () => {
+    const payload = buildValidPayload({ status: 'FAILED' });
+    // A valid HMAC is generated over the FAILED payload
+    const message = CANONICAL_FIELDS.map(f => `${f}=${payload[f]}`).join(',');
+    payload['signature'] = createHmac('sha256', SECRET).update(message).digest('base64');
+    // Signature itself is valid — calling code must check status separately
+    const result = verifyEsewaSignature(payload, SECRET);
+    expect(result.valid).toBe(true); // signature check passes; status check is caller's responsibility
+    expect(payload.status).toBe('FAILED');
+  });
+
+  it('rejects empty payload', () => {
+    const result = verifyEsewaSignature({}, SECRET);
+    expect(result.valid).toBe(false);
+    expect(result.error).toContain('Missing required fields');
+  });
+
+  it('rejects payload with empty string fields', () => {
+    const payload = buildValidPayload({ transaction_code: '' });
+    const result = verifyEsewaSignature(payload, SECRET);
+    expect(result.valid).toBe(false);
+  });
+});

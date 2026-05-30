@@ -94,26 +94,29 @@ export default function VendorDashboard() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      {/* ── Header ── */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl font-black shadow-md">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white text-xl font-black shadow-md"
+            style={{ background: 'linear-gradient(135deg,#7C3AED,#2563EB)' }}>
             {(vendorProfile?.storeName ?? user?.name ?? 'V')[0].toUpperCase()}
           </div>
           <div>
-            <h1 className="text-2xl font-black text-gray-900 leading-tight">
+            <h1 className="text-2xl font-black text-[var(--text-heading)] leading-tight">
               {vendorProfile?.storeName ?? 'Your Store'}
             </h1>
-            <p className="text-sm text-gray-500">{user?.email}</p>
+            <p className="text-sm text-[var(--text-muted)]">{user?.email}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <select value={period} onChange={e => setPeriod(e.target.value as Period)}
-            className="px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none">
+            className="px-3 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/25"
+            style={{ border: '1px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text-heading)' }}>
             {periodOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
           <Link href="/vendor/designs/new"
-            className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white text-sm font-bold rounded-xl hover:bg-gray-800 transition-colors shadow-sm flex-shrink-0">
+            className="flex items-center gap-2 px-4 py-2.5 text-white text-sm font-bold rounded-xl transition-all hover:opacity-90 shadow-sm flex-shrink-0"
+            style={{ background: 'linear-gradient(135deg,#7C3AED,#2563EB)' }}>
             <Plus className="w-4 h-4" /> New Design
           </Link>
         </div>
@@ -221,39 +224,41 @@ export default function VendorDashboard() {
         </ChartContainer>
       </div>
 
-      {/* ── Performance Suggestions ──────────────────────────────────────── */}
+      {/* ── Performance Suggestions ── */}
       <div>
         <div className="flex items-center gap-2 mb-4">
           <Lightbulb className="w-5 h-5 text-yellow-500" />
-          <h2 className="font-black text-gray-900">Performance Suggestions</h2>
+          <h2 className="font-black text-[var(--text-heading)]">Performance Suggestions</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {SUGGESTIONS.filter((_, i) => !dismissedSuggestions.includes(i)).slice(0, 4).map((s, i) => (
-            <div key={i} className="bg-white rounded-2xl border border-gray-100 p-4 flex items-start gap-3 hover:shadow-sm transition-shadow">
+            <div key={i} className="rounded-2xl border p-4 flex items-start gap-3 hover:shadow-sm transition-shadow"
+              style={{ background: 'var(--surface)', borderColor: 'var(--border-color)' }}>
               <span className="text-2xl flex-shrink-0">{s.icon}</span>
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-gray-900 text-sm">{s.title}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{s.message}</p>
+                <p className="font-bold text-[var(--text-heading)] text-sm">{s.title}</p>
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">{s.message}</p>
                 <Link href={s.href}
-                  className="inline-flex items-center gap-1 mt-2 text-xs font-semibold text-blue-600 hover:text-blue-700">
+                  className="inline-flex items-center gap-1 mt-2 text-xs font-semibold text-purple-600 hover:text-purple-700 transition-colors">
                   {s.action} <ChevronRight className="w-3 h-3" />
                 </Link>
               </div>
               <button onClick={() => setDismissedSuggestions(p => [...p, i])}
-                className="text-gray-300 hover:text-gray-500 transition-colors text-xs flex-shrink-0">✕</button>
+                className="text-[var(--text-faint)] hover:text-[var(--text-muted)] transition-colors text-xs flex-shrink-0">✕</button>
             </div>
           ))}
         </div>
       </div>
 
-      {/* ── Financial Breakdown ──────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-6">
+      {/* ── Financial Breakdown ── */}
+      <div className="rounded-2xl border p-6"
+        style={{ background: 'var(--surface)', borderColor: 'var(--border-color)' }}>
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
             <DollarSign className="w-5 h-5 text-green-500" />
-            <h2 className="font-black text-gray-900">Financial Breakdown</h2>
+            <h2 className="font-black text-[var(--text-heading)]">Financial Breakdown</h2>
           </div>
-          <Link href="/vendor/earnings" className="text-xs text-blue-600 font-semibold hover:text-blue-700 flex items-center gap-1">
+          <Link href="/vendor/earnings" className="text-xs text-purple-600 font-semibold hover:text-purple-700 flex items-center gap-1 transition-colors">
             View History <ArrowUpRight className="w-3 h-3" />
           </Link>
         </div>
@@ -261,46 +266,49 @@ export default function VendorDashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {/* Earnings Summary */}
           <div className="space-y-3">
-            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">This Period</h3>
+            <h3 className="text-xs font-bold text-[var(--text-faint)] uppercase tracking-widest">This Period</h3>
             {[
-              { label: 'Gross Sales', value: formatPrice(grossSales), color: 'text-gray-900' },
-              { label: `Commission (${commissionRate.toFixed(0)}%)`, value: `-${formatPrice(commission)}`, color: 'text-red-500' },
-              { label: 'Net Earnings', value: formatPrice(netEarnings), color: 'text-green-600 font-black text-base' },
+              { label: 'Gross Sales', value: formatPrice(grossSales), extra: '' },
+              { label: `Commission (${commissionRate.toFixed(0)}%)`, value: `-${formatPrice(commission)}`, extra: 'text-red-500' },
+              { label: 'Net Earnings', value: formatPrice(netEarnings), extra: 'text-green-600 font-black text-base' },
             ].map(row => (
-              <div key={row.label} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-                <span className="text-sm text-gray-600">{row.label}</span>
-                <span className={`text-sm font-bold ${row.color}`}>{row.value}</span>
+              <div key={row.label} className="flex items-center justify-between py-2 last:border-0"
+                style={{ borderBottom: '1px solid var(--border-color)' }}>
+                <span className="text-sm text-[var(--text-body)]">{row.label}</span>
+                <span className={`text-sm font-bold text-[var(--text-heading)] ${row.extra}`}>{row.value}</span>
               </div>
             ))}
           </div>
 
           {/* Payout Info */}
           <div className="space-y-3">
-            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Payout Schedule</h3>
-            <div className="bg-green-50 rounded-xl p-4 space-y-2">
+            <h3 className="text-xs font-bold text-[var(--text-faint)] uppercase tracking-widest">Payout Schedule</h3>
+            <div className="rounded-xl p-4 space-y-2"
+              style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)' }}>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Available Balance</span>
-                <span className="font-black text-green-700">{formatPrice((earnings as any)?.availableBalance ?? (earnings as any)?.pendingEarnings ?? 0)}</span>
+                <span className="text-[var(--text-body)]">Available Balance</span>
+                <span className="font-black text-green-600">{formatPrice((earnings as any)?.availableBalance ?? (earnings as any)?.pendingEarnings ?? 0)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Commission Rate</span>
-                <span className="font-bold text-gray-900">{commissionRate.toFixed(0)}%</span>
+                <span className="text-[var(--text-body)]">Commission Rate</span>
+                <span className="font-bold text-[var(--text-heading)]">{commissionRate.toFixed(0)}%</span>
               </div>
               <Link href="/vendor/earnings"
-                className="flex items-center justify-center gap-2 w-full mt-3 py-2 bg-green-600 text-white text-sm font-bold rounded-xl hover:bg-green-700 transition-colors">
+                className="flex items-center justify-center gap-2 w-full mt-3 py-2 text-white text-sm font-bold rounded-xl hover:opacity-90 transition-all"
+                style={{ background: 'linear-gradient(135deg,#16a34a,#15803d)' }}>
                 View Payout History
               </Link>
             </div>
 
             {payouts.length > 0 && (
               <div>
-                <p className="text-xs text-gray-400 mb-2">Recent payouts</p>
+                <p className="text-xs text-[var(--text-faint)] mb-2">Recent payouts</p>
                 {payouts.slice(0, 2).map((p: any) => (
                   <div key={p.id} className="flex items-center justify-between py-1.5 text-sm">
-                    <span className="text-gray-600 text-xs">{formatDate(p.periodEnd)}</span>
+                    <span className="text-[var(--text-muted)] text-xs">{formatDate(p.periodEnd)}</span>
                     <div className="flex items-center gap-2">
                       <StatusBadge status={p.status} type="payment" />
-                      <span className="font-bold text-gray-900">{formatPrice(p.amount)}</span>
+                      <span className="font-bold text-[var(--text-heading)]">{formatPrice(p.amount)}</span>
                     </div>
                   </div>
                 ))}
@@ -310,26 +318,27 @@ export default function VendorDashboard() {
         </div>
       </div>
 
-      {/* ── Recent Orders ────────────────────────────────────────────────── */}
+      {/* ── Recent Orders ── */}
       {recentOrders.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
-            <h2 className="font-black text-gray-900">Recent Orders</h2>
-            <Link href="/vendor/orders" className="text-xs text-blue-600 font-semibold hover:text-blue-700 flex items-center gap-1">
+        <div className="rounded-2xl border overflow-hidden"
+          style={{ background: 'var(--surface)', borderColor: 'var(--border-color)' }}>
+          <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid var(--border-color)' }}>
+            <h2 className="font-black text-[var(--text-heading)]">Recent Orders</h2>
+            <Link href="/vendor/orders" className="text-xs text-purple-600 font-semibold hover:text-purple-700 flex items-center gap-1 transition-colors">
               View all <ArrowUpRight className="w-3 h-3" />
             </Link>
           </div>
-          <div className="divide-y divide-gray-50">
+          <div className="divide-y" style={{ borderColor: 'var(--border-color)' }}>
             {recentOrders.slice(0, 5).map(order => (
               <Link key={order.id} href={`/admin/orders/${order.id}`}
-                className="flex items-center justify-between px-5 py-3.5 hover:bg-gray-50 transition-colors">
+                className="flex items-center justify-between px-5 py-3.5 hover:bg-[var(--hover-bg)] transition-colors">
                 <div className="min-w-0">
-                  <p className="font-bold text-sm text-gray-900">#{order.id.slice(-8).toUpperCase()}</p>
-                  <p className="text-xs text-gray-400">{formatDate(order.createdAt)} · {order.items.length} items</p>
+                  <p className="font-bold text-sm text-[var(--text-heading)] font-mono">#{order.id.slice(-8).toUpperCase()}</p>
+                  <p className="text-xs text-[var(--text-faint)]">{formatDate(order.createdAt)} · {order.items.length} items</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <StatusBadge status={order.orderStatus} type="order" />
-                  <p className="text-sm font-black text-gray-900">{formatPrice(order.totalAmount)}</p>
+                  <p className="text-sm font-black text-[var(--text-heading)]">{formatPrice(order.totalAmount)}</p>
                 </div>
               </Link>
             ))}
@@ -337,18 +346,20 @@ export default function VendorDashboard() {
         </div>
       )}
 
-      {/* ── Quick Actions ────────────────────────────────────────────────── */}
+      {/* ── Quick Actions ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { href: '/vendor/designs/new', icon: <Plus className="w-5 h-5 text-white" />, label: 'Upload Design', bg: 'bg-blue-600' },
-          { href: '/vendor/designs', icon: <Package className="w-5 h-5 text-white" />, label: 'Manage Products', bg: 'bg-purple-600' },
-          { href: '/vendor/earnings', icon: <DollarSign className="w-5 h-5 text-white" />, label: 'View Earnings', bg: 'bg-green-600' },
-          { href: '/vendor/settings', icon: <Eye className="w-5 h-5 text-white" />, label: 'Store Settings', bg: 'bg-gray-700' },
+          { href: '/vendor/designs/new', icon: <Plus className="w-5 h-5 text-white" />, label: 'Upload Design', bg: 'linear-gradient(135deg,#2563EB,#1d4ed8)' },
+          { href: '/vendor/designs', icon: <Package className="w-5 h-5 text-white" />, label: 'Manage Products', bg: 'linear-gradient(135deg,#7C3AED,#6d28d9)' },
+          { href: '/vendor/earnings', icon: <DollarSign className="w-5 h-5 text-white" />, label: 'View Earnings', bg: 'linear-gradient(135deg,#16a34a,#15803d)' },
+          { href: '/vendor/settings', icon: <Eye className="w-5 h-5 text-white" />, label: 'Store Settings', bg: 'linear-gradient(135deg,#374151,#1f2937)' },
         ].map(a => (
           <Link key={a.href} href={a.href}
-            className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-gray-100 hover:shadow-sm transition-all group">
-            <div className={`w-9 h-9 rounded-xl ${a.bg} flex items-center justify-center flex-shrink-0`}>{a.icon}</div>
-            <span className="text-sm font-semibold text-gray-900 truncate">{a.label}</span>
+            className="flex items-center gap-3 p-4 rounded-2xl border hover:shadow-sm transition-all"
+            style={{ background: 'var(--surface)', borderColor: 'var(--border-color)' }}>
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{ background: a.bg }}>{a.icon}</div>
+            <span className="text-sm font-semibold text-[var(--text-heading)] truncate">{a.label}</span>
           </Link>
         ))}
       </div>

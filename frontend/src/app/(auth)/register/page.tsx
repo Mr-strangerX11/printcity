@@ -6,10 +6,9 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Printer, Sparkles } from 'lucide-react';
 import { authApi } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { Navbar } from '@/components/layout/Navbar';
 import { toast } from 'sonner';
 import { getErrorMsg } from '@/lib/utils';
 
@@ -25,6 +24,9 @@ const schema = z.object({
 });
 
 type FormData = z.infer<typeof schema>;
+
+const FIELD_CLASS = 'w-full px-4 py-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/25 transition-all';
+const FIELD_STYLE = { border: '1px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text-heading)' };
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -53,85 +55,130 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--page-bg)' }}>
-      <Navbar />
-      <div className="flex items-center justify-center p-4 py-12">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <Link href="/" className="inline-flex items-center gap-2 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-brand-gradient flex items-center justify-center text-white font-bold">PC</div>
-            </Link>
-            <h1 className="text-3xl font-black text-gray-900">Create an account</h1>
-            <p className="text-gray-500 mt-2">Join thousands of creators and customers</p>
+    <div className="min-h-screen flex" style={{ background: 'var(--page-bg)' }}>
+
+      {/* ── Brand panel ── */}
+      <div className="hidden lg:flex lg:w-[45%] flex-col justify-between p-12 relative overflow-hidden"
+        style={{ background: 'linear-gradient(145deg,#1e0545 0%,#1a237e 50%,#0d1b4b 100%)' }}>
+        <div className="absolute inset-0 opacity-20"
+          style={{ backgroundImage: 'radial-gradient(circle at 20% 80%,#7C3AED 0%,transparent 50%), radial-gradient(circle at 80% 20%,#2563EB 0%,transparent 50%)' }} />
+        <div className="relative">
+          <div className="flex items-center gap-3 mb-12">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg,#7C3AED,#2563EB)' }}>
+              <Printer className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-white font-black text-xl tracking-tight">Print City</span>
+          </div>
+          <h2 className="text-4xl font-black text-white leading-tight mb-4">
+            Join thousands of<br />creators & customers
+          </h2>
+          <p className="text-blue-200 text-base leading-relaxed">
+            Get access to premium print products, track orders in real time, and manage your designs all in one place.
+          </p>
+        </div>
+
+        <div className="relative space-y-4">
+          {[
+            { icon: '🎨', title: 'Custom Designs', desc: 'Upload and sell your artwork' },
+            { icon: '📦', title: 'Fast Delivery', desc: 'Orders delivered across Nepal' },
+            { icon: '💎', title: 'Premium Quality', desc: 'Professional-grade print products' },
+          ].map(f => (
+            <div key={f.title} className="flex items-center gap-3 p-3 rounded-xl"
+              style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}>
+              <span className="text-2xl">{f.icon}</span>
+              <div>
+                <p className="text-white font-bold text-sm">{f.title}</p>
+                <p className="text-blue-300 text-xs">{f.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Form panel ── */}
+      <div className="flex-1 flex flex-col justify-center px-6 py-12 lg:px-12">
+        <div className="w-full max-w-md mx-auto">
+
+          {/* Mobile logo */}
+          <div className="flex items-center gap-2 mb-8 lg:hidden">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg,#7C3AED,#2563EB)' }}>
+              <Printer className="w-4 h-4 text-white" />
+            </div>
+            <span className="font-black text-lg text-[var(--text-heading)]">Print City</span>
           </div>
 
-          <div className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm">
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-
-              {/* Name */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
-                <input {...register('name')} placeholder="Jane Doe"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
-                {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name.message}</p>}
-              </div>
-
-              {/* Email */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Email</label>
-                <input {...register('email')} type="email" placeholder="you@example.com"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
-                {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email.message}</p>}
-              </div>
-
-              {/* Phone */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
-                <input {...register('phone')} type="tel" placeholder="+977 98XXXXXXXX"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
-                {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone.message}</p>}
-              </div>
-
-              {/* Password */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
-                <div className="relative">
-                  <input {...register('password')} type={showPass ? 'text' : 'password'} placeholder="Min. 8 characters"
-                    className="w-full px-4 py-3 pr-12 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
-                  <button type="button" onClick={() => setShowPass(!showPass)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
-                    {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-                {errors.password && <p className="text-xs text-red-500 mt-1">{errors.password.message}</p>}
-              </div>
-
-              {/* Confirm Password */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Re-Password</label>
-                <div className="relative">
-                  <input {...register('confirmPassword')} type={showConfirm ? 'text' : 'password'} placeholder="Repeat your password"
-                    className="w-full px-4 py-3 pr-12 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
-                  <button type="button" onClick={() => setShowConfirm(!showConfirm)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
-                    {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-                {errors.confirmPassword && <p className="text-xs text-red-500 mt-1">{errors.confirmPassword.message}</p>}
-              </div>
-
-              <button type="submit" disabled={isSubmitting}
-                className="w-full py-3.5 bg-gray-900 text-white font-semibold rounded-xl hover:bg-gray-800 disabled:opacity-60 transition-colors flex items-center justify-center gap-2">
-                {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                {isSubmitting ? 'Creating account...' : 'Create Account'}
-              </button>
-            </form>
-
-            <p className="text-center text-sm text-gray-500 mt-6">
-              Already have an account?{' '}
-              <Link href="/login" className="text-blue-600 font-semibold hover:text-blue-700">Sign in</Link>
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles className="w-5 h-5 text-purple-500" />
+              <span className="text-xs font-bold text-purple-600 uppercase tracking-wider">Free Account</span>
+            </div>
+            <h1 className="text-3xl font-black text-[var(--text-heading)]">Create an account</h1>
+            <p className="text-[var(--text-muted)] mt-1.5">Already a member?{' '}
+              <Link href="/login" className="text-purple-600 font-semibold hover:text-purple-700 transition-colors">Sign in</Link>
             </p>
           </div>
+
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+
+            <div>
+              <label className="block text-sm font-semibold text-[var(--text-body)] mb-1.5">Full Name</label>
+              <input {...register('name')} placeholder="Jane Doe" className={FIELD_CLASS} style={FIELD_STYLE} />
+              {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name.message}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-[var(--text-body)] mb-1.5">Email</label>
+              <input {...register('email')} type="email" placeholder="you@example.com" className={FIELD_CLASS} style={FIELD_STYLE} />
+              {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email.message}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-[var(--text-body)] mb-1.5">Phone Number</label>
+              <input {...register('phone')} type="tel" placeholder="+977 98XXXXXXXX" className={FIELD_CLASS} style={FIELD_STYLE} />
+              {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone.message}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-[var(--text-body)] mb-1.5">Password</label>
+              <div className="relative">
+                <input {...register('password')} type={showPass ? 'text' : 'password'} placeholder="Min. 8 characters"
+                  className={`${FIELD_CLASS} pr-12`} style={FIELD_STYLE} />
+                <button type="button" onClick={() => setShowPass(!showPass)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-faint)] hover:text-[var(--text-muted)] transition-colors">
+                  {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {errors.password && <p className="text-xs text-red-500 mt-1">{errors.password.message}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-[var(--text-body)] mb-1.5">Confirm Password</label>
+              <div className="relative">
+                <input {...register('confirmPassword')} type={showConfirm ? 'text' : 'password'} placeholder="Repeat your password"
+                  className={`${FIELD_CLASS} pr-12`} style={FIELD_STYLE} />
+                <button type="button" onClick={() => setShowConfirm(!showConfirm)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-faint)] hover:text-[var(--text-muted)] transition-colors">
+                  {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {errors.confirmPassword && <p className="text-xs text-red-500 mt-1">{errors.confirmPassword.message}</p>}
+            </div>
+
+            <button type="submit" disabled={isSubmitting}
+              className="w-full py-3.5 text-white font-bold rounded-xl disabled:opacity-60 transition-all hover:opacity-90 flex items-center justify-center gap-2 mt-2 shadow-md"
+              style={{ background: 'linear-gradient(135deg,#7C3AED,#2563EB)' }}>
+              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+              {isSubmitting ? 'Creating account…' : 'Create Account'}
+            </button>
+          </form>
+
+          <p className="text-center text-xs text-[var(--text-faint)] mt-6">
+            By creating an account you agree to our{' '}
+            <Link href="/terms" className="hover:underline text-[var(--text-muted)]">Terms</Link> &{' '}
+            <Link href="/privacy" className="hover:underline text-[var(--text-muted)]">Privacy Policy</Link>
+          </p>
         </div>
       </div>
     </div>

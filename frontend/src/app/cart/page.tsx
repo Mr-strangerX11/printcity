@@ -45,7 +45,9 @@ export default function CartPage() {
     <>
       <Navbar />
       <div className="max-w-5xl mx-auto px-4 py-12 space-y-4">
-        {[1,2,3].map(i => <div key={i} className="h-28 bg-gray-100 rounded-2xl animate-pulse" />)}
+        {[1, 2, 3].map(i => (
+          <div key={i} className="h-28 rounded-2xl skeleton" />
+        ))}
       </div>
     </>
   );
@@ -54,13 +56,15 @@ export default function CartPage() {
     <>
       <Navbar />
       <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4">
-        <div className="w-24 h-24 bg-gray-100 rounded-3xl flex items-center justify-center mb-6">
-          <ShoppingBag className="w-12 h-12 text-gray-300" />
+        <div className="w-24 h-24 rounded-3xl flex items-center justify-center mb-6"
+          style={{ background: 'var(--surface-alt)' }}>
+          <ShoppingBag className="w-12 h-12 text-[var(--text-faint)]" />
         </div>
-        <h2 className="text-2xl font-black text-gray-900 mb-2">Your cart is empty</h2>
-        <p className="text-gray-500 mb-8 max-w-xs">Looks like you haven't added anything yet. Explore our collection!</p>
+        <h2 className="text-2xl font-black text-[var(--text-heading)] mb-2">Your cart is empty</h2>
+        <p className="text-[var(--text-muted)] mb-8 max-w-xs">Looks like you haven't added anything yet. Explore our collection!</p>
         <Link href="/products"
-          className="inline-flex items-center gap-2 px-7 py-3.5 bg-gray-900 text-white font-bold rounded-2xl hover:bg-gray-800 transition-colors shadow-sm">
+          className="inline-flex items-center gap-2 px-7 py-3.5 text-white font-bold rounded-2xl hover:opacity-90 transition-opacity shadow-sm"
+          style={{ background: 'linear-gradient(135deg,#7C3AED,#2563EB)' }}>
           Browse Products <ArrowRight className="w-4 h-4" />
         </Link>
       </div>
@@ -81,39 +85,43 @@ export default function CartPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl md:text-3xl font-black text-gray-900">Your Cart</h1>
-            <p className="text-gray-500 text-sm mt-0.5">{cart.items.length} {cart.items.length === 1 ? 'item' : 'items'}</p>
+            <h1 className="text-2xl md:text-3xl font-black text-[var(--text-heading)]">Your Cart</h1>
+            <p className="text-[var(--text-muted)] text-sm mt-0.5">
+              {cart.items.length} {cart.items.length === 1 ? 'item' : 'items'}
+            </p>
           </div>
-          <Link href="/products" className="text-sm text-blue-600 hover:text-blue-700 font-semibold">
+          <Link href="/products" className="text-sm text-purple-600 hover:text-purple-700 font-semibold transition-colors">
             + Add more items
           </Link>
         </div>
 
         {/* Free shipping progress */}
         {subtotal < shippingThreshold && (
-          <div className="mb-6 p-4 bg-blue-50 rounded-2xl border border-blue-100">
+          <div className="mb-6 p-4 rounded-2xl border"
+            style={{ background: 'rgba(37,99,235,0.06)', borderColor: 'rgba(37,99,235,0.15)' }}>
             <div className="flex items-center justify-between text-sm mb-2">
-              <span className="text-blue-700 font-semibold flex items-center gap-1.5">
+              <span className="text-blue-700 dark:text-blue-400 font-semibold flex items-center gap-1.5">
                 <Truck className="w-4 h-4" /> Add {formatPrice(shippingThreshold - subtotal)} for FREE shipping
               </span>
-              <span className="text-blue-600 font-bold">{Math.round(progressToFreeShipping)}%</span>
+              <span className="text-blue-600 dark:text-blue-400 font-bold">{Math.round(progressToFreeShipping)}%</span>
             </div>
-            <div className="h-1.5 bg-blue-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-brand-gradient rounded-full transition-all duration-500"
-                style={{ width: `${progressToFreeShipping}%` }}
-              />
+            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(37,99,235,0.15)' }}>
+              <div className="h-full rounded-full transition-all duration-500"
+                style={{ width: `${progressToFreeShipping}%`, background: 'linear-gradient(90deg,#7C3AED,#2563EB)' }} />
             </div>
           </div>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* ── Cart Items ──────────────────────────────────────── */}
+          {/* ── Cart Items ── */}
           <div className="lg:col-span-2 space-y-3">
             {cart.items.map((item) => (
-              <div key={item.id} className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-5 flex gap-3 sm:gap-4 hover:border-gray-200 hover:shadow-sm transition-all">
+              <div key={item.id}
+                className="rounded-2xl border p-4 sm:p-5 flex gap-3 sm:gap-4 hover:shadow-sm transition-all"
+                style={{ background: 'var(--surface)', borderColor: 'var(--border-color)' }}>
                 <Link href={`/products/${item.variant.product.slug}`}
-                  className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-gray-50 flex-shrink-0 hover:opacity-90 transition-opacity">
+                  className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden flex-shrink-0 hover:opacity-90 transition-opacity"
+                  style={{ background: 'var(--surface-alt)' }}>
                   <Image
                     src={item.variant.product.images?.[0]?.url ?? 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=200'}
                     alt={item.variant.product.title}
@@ -123,34 +131,35 @@ export default function CartPage() {
                 </Link>
                 <div className="flex-1 min-w-0">
                   <Link href={`/products/${item.variant.product.slug}`}
-                    className="font-bold text-gray-900 hover:text-blue-600 transition-colors line-clamp-1 text-sm">
+                    className="font-bold text-[var(--text-heading)] hover:text-purple-600 transition-colors line-clamp-1 text-sm">
                     {item.variant.product.title}
                   </Link>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <p className="text-xs text-[var(--text-muted)] mt-0.5">
                     {item.variant.size} / {item.variant.color}
                   </p>
-                  <p className="text-xs text-gray-400 mt-0.5">
+                  <p className="text-xs text-[var(--text-faint)] mt-0.5">
                     {item.variant.product.vendor?.storeName}
                   </p>
-                  <p className="font-black text-gray-900 mt-1.5 text-sm">{formatPrice(item.variant.price)}</p>
+                  <p className="font-black text-[var(--text-heading)] mt-1.5 text-sm">{formatPrice(item.variant.price)}</p>
                 </div>
                 <div className="flex flex-col items-end gap-2.5 flex-shrink-0">
                   <button onClick={() => handleRemove(item.id)}
-                    className="text-gray-300 hover:text-red-500 transition-colors p-1">
+                    className="text-[var(--text-faint)] hover:text-red-500 transition-colors p-1">
                     <Trash2 className="w-4 h-4" />
                   </button>
-                  <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="flex items-center rounded-xl overflow-hidden border"
+                    style={{ borderColor: 'var(--border-color)' }}>
                     <button onClick={() => handleUpdate(item.id, item.qty - 1)}
-                      className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 transition-colors">
+                      className="w-8 h-8 flex items-center justify-center hover:bg-[var(--hover-bg)] transition-colors">
                       <Minus className="w-3 h-3" />
                     </button>
-                    <span className="w-8 text-center text-sm font-black">{item.qty}</span>
+                    <span className="w-8 text-center text-sm font-black text-[var(--text-heading)]">{item.qty}</span>
                     <button onClick={() => handleUpdate(item.id, item.qty + 1)}
-                      className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 transition-colors">
+                      className="w-8 h-8 flex items-center justify-center hover:bg-[var(--hover-bg)] transition-colors">
                       <Plus className="w-3 h-3" />
                     </button>
                   </div>
-                  <p className="text-sm font-black text-gray-800">
+                  <p className="text-sm font-black text-[var(--text-heading)]">
                     {formatPrice(Number(item.variant.price) * item.qty)}
                   </p>
                 </div>
@@ -158,16 +167,17 @@ export default function CartPage() {
             ))}
 
             {/* Gift message */}
-            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+            <div className="rounded-2xl border overflow-hidden"
+              style={{ background: 'var(--surface)', borderColor: 'var(--border-color)' }}>
               <button
                 onClick={() => setShowGiftMessage(!showGiftMessage)}
-                className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors"
+                className="w-full flex items-center justify-between px-5 py-4 hover:bg-[var(--hover-bg)] transition-colors"
               >
                 <div className="flex items-center gap-2.5">
                   <span className="text-lg">🎁</span>
-                  <span className="font-semibold text-sm text-gray-700">Add a gift message</span>
+                  <span className="font-semibold text-sm text-[var(--text-body)]">Add a gift message</span>
                 </div>
-                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${showGiftMessage ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-4 h-4 text-[var(--text-faint)] transition-transform duration-200 ${showGiftMessage ? 'rotate-180' : ''}`} />
               </button>
               {showGiftMessage && (
                 <div className="px-5 pb-4">
@@ -176,57 +186,61 @@ export default function CartPage() {
                     onChange={(e) => setGiftMessage(e.target.value)}
                     placeholder="Write a personal message for the recipient..."
                     rows={3}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none"
+                    className="w-full px-4 py-3 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-purple-500/25 transition-all"
+                    style={{ border: '1px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text-heading)' }}
                   />
                 </div>
               )}
             </div>
           </div>
 
-          {/* ── Order Summary ───────────────────────────────────── */}
+          {/* ── Order Summary ── */}
           <div>
-            <div className="bg-white rounded-2xl border border-gray-100 p-5 lg:sticky lg:top-20 space-y-4">
-              <h3 className="font-black text-gray-900 text-lg">Order Summary</h3>
+            <div className="rounded-2xl border p-5 lg:sticky lg:top-20 space-y-4"
+              style={{ background: 'var(--surface)', borderColor: 'var(--border-color)' }}>
+              <h3 className="font-black text-[var(--text-heading)] text-lg">Order Summary</h3>
 
               {/* Coupon code */}
               <div>
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Promo Code</p>
+                <p className="text-xs font-bold text-[var(--text-faint)] uppercase tracking-wider mb-2">Promo Code</p>
                 <div className="flex gap-2">
                   <div className="flex-1 relative">
-                    <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                    <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--text-faint)]" />
                     <input
                       value={couponCode}
                       onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                       placeholder="SAVE10"
                       disabled={couponApplied}
-                      className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 disabled:bg-gray-50 disabled:text-gray-400 font-mono tracking-wider"
+                      className="w-full pl-9 pr-3 py-2.5 rounded-xl text-sm font-mono tracking-wider focus:outline-none focus:ring-2 focus:ring-purple-500/25 disabled:opacity-50 transition-all"
+                      style={{ border: '1px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text-heading)' }}
                     />
                   </div>
                   <button
                     onClick={applyCoupon}
                     disabled={!couponCode.trim() || couponApplied}
-                    className="px-3.5 py-2.5 bg-gray-900 text-white text-sm font-bold rounded-xl hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    className="px-3.5 py-2.5 text-white text-sm font-bold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:opacity-90"
+                    style={{ background: 'linear-gradient(135deg,#7C3AED,#2563EB)' }}
                   >
                     Apply
                   </button>
                 </div>
               </div>
 
-              <hr className="border-gray-100" />
+              <hr style={{ borderColor: 'var(--border-color)' }} />
 
               {/* Line items */}
               <div className="space-y-2.5">
-                <div className="flex justify-between text-sm text-gray-600">
+                <div className="flex justify-between text-sm text-[var(--text-body)]">
                   <span>Subtotal ({cart.items.reduce((s, i) => s + i.qty, 0)} items)</span>
-                  <span className="font-semibold">{formatPrice(subtotal)}</span>
+                  <span className="font-semibold text-[var(--text-heading)]">{formatPrice(subtotal)}</span>
                 </div>
-                <div className="flex justify-between text-sm text-gray-600">
+                <div className="flex justify-between text-sm text-[var(--text-body)]">
                   <span className="flex items-center gap-1.5">
                     <Truck className="w-3.5 h-3.5" /> Shipping
                   </span>
                   {shippingFee === 0
                     ? <span className="text-green-600 font-bold">Free</span>
-                    : <span className="font-semibold">{formatPrice(shippingFee)}</span>
+                    : <span className="font-semibold text-[var(--text-heading)]">{formatPrice(shippingFee)}</span>
                   }
                 </div>
                 {couponApplied && (
@@ -237,35 +251,38 @@ export default function CartPage() {
                 )}
               </div>
 
-              <div className="border-t border-gray-100 pt-3 flex justify-between font-black text-gray-900">
+              <div className="pt-3 flex justify-between font-black text-[var(--text-heading)]"
+                style={{ borderTop: '1px solid var(--border-color)' }}>
                 <span className="text-lg">Total</span>
                 <span className="text-xl">{formatPrice(total)}</span>
               </div>
 
               {/* Estimated delivery */}
-              <div className="flex items-center gap-2 p-3 bg-green-50 rounded-xl">
+              <div className="flex items-center gap-2 p-3 rounded-xl"
+                style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)' }}>
                 <Clock className="w-4 h-4 text-green-500 flex-shrink-0" />
                 <div>
-                  <p className="text-xs font-bold text-green-800">Estimated delivery</p>
-                  <p className="text-xs text-green-700">{DELIVERY_DATE}</p>
+                  <p className="text-xs font-bold text-green-700 dark:text-green-400">Estimated delivery</p>
+                  <p className="text-xs text-green-600 dark:text-green-500">{DELIVERY_DATE}</p>
                 </div>
               </div>
 
               <button onClick={() => router.push('/checkout')}
-                className="w-full flex items-center justify-center gap-2 py-4 bg-brand-gradient text-white font-black rounded-2xl hover:opacity-90 transition-opacity shadow-md text-base">
+                className="w-full flex items-center justify-center gap-2 py-4 text-white font-black rounded-2xl hover:opacity-90 transition-opacity shadow-md text-base"
+                style={{ background: 'linear-gradient(135deg,#7C3AED,#2563EB)' }}>
                 Checkout <ArrowRight className="w-4 h-4" />
               </button>
 
-              <Link href="/products" className="block text-center text-sm text-gray-400 hover:text-gray-600 transition-colors">
+              <Link href="/products" className="block text-center text-sm text-[var(--text-faint)] hover:text-[var(--text-muted)] transition-colors">
                 ← Continue Shopping
               </Link>
 
-              {/* Trust */}
+              {/* Trust badges */}
               <div className="flex items-center justify-center gap-4 pt-1">
-                <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                <div className="flex items-center gap-1.5 text-xs text-[var(--text-faint)]">
                   <Shield className="w-3.5 h-3.5 text-green-500" /> Secure checkout
                 </div>
-                <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                <div className="flex items-center gap-1.5 text-xs text-[var(--text-faint)]">
                   <Truck className="w-3.5 h-3.5 text-blue-500" /> Fast delivery
                 </div>
               </div>

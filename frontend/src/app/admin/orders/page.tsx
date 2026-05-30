@@ -9,6 +9,7 @@ import { useOrders } from '@/hooks';
 import { OrderStatus } from '@/types';
 import { formatPrice, formatDate } from '@/lib/utils';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { Package } from 'lucide-react';
 
 const STATUSES: OrderStatus[] = ['PENDING','CONFIRMED','PRINTING','PACKED','SHIPPED','DELIVERED','CANCELLED','REFUNDED'];
 
@@ -31,57 +32,91 @@ function AdminOrdersContent() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-black text-gray-900">Orders</h1>
-        <span className="text-sm text-gray-500">{total} total</span>
+        <h1 className="text-2xl font-black text-[var(--text-heading)]">Orders</h1>
+        <span className="text-sm text-[var(--text-muted)] tabular-nums">{total.toLocaleString()} total</span>
       </div>
 
-      {/* Status Filter */}
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      {/* ── Status filter pills ── */}
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
         <button onClick={() => setStatus('')}
-          className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${!status ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+          className="px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all flex-shrink-0"
+          style={!status
+            ? { background: 'linear-gradient(135deg,#7C3AED,#2563EB)', color: '#fff' }
+            : { background: 'var(--surface)', border: '1px solid var(--border-color)', color: 'var(--text-body)' }}>
           All
         </button>
         {STATUSES.map(s => (
           <button key={s} onClick={() => setStatus(s)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${status === s ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+            className="px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all flex-shrink-0"
+            style={status === s
+              ? { background: 'linear-gradient(135deg,#7C3AED,#2563EB)', color: '#fff' }
+              : { background: 'var(--surface)', border: '1px solid var(--border-color)', color: 'var(--text-body)' }}>
             {s.replace(/_/g, ' ')}
           </button>
         ))}
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+      {/* ── Table ── */}
+      <div className="rounded-2xl border overflow-hidden"
+        style={{ background: 'var(--surface)', borderColor: 'var(--border-color)' }}>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-50 bg-gray-50/50">
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Order ID</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Customer</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell">Date</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Items</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Total</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden sm:table-cell">Payment</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+              <tr style={{ borderBottom: '1px solid var(--border-color)', background: 'var(--surface-alt)' }}>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-[var(--text-faint)] uppercase tracking-wide">Order ID</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-[var(--text-faint)] uppercase tracking-wide hidden md:table-cell">Customer</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-[var(--text-faint)] uppercase tracking-wide hidden lg:table-cell">Date</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-[var(--text-faint)] uppercase tracking-wide hidden md:table-cell">Items</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-[var(--text-faint)] uppercase tracking-wide">Total</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-[var(--text-faint)] uppercase tracking-wide hidden sm:table-cell">Payment</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-[var(--text-faint)] uppercase tracking-wide">Status</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y" style={{ borderColor: 'var(--border-color)' }}>
               {loading ? (
                 Array.from({ length: 6 }).map((_, i) => (
-                  <tr key={i}><td colSpan={8} className="px-4 py-4"><div className="h-4 bg-gray-100 rounded animate-pulse" /></td></tr>
+                  <tr key={i}>
+                    <td colSpan={8} className="px-4 py-4">
+                      <div className="h-4 rounded skeleton" />
+                    </td>
+                  </tr>
                 ))
               ) : orders.length === 0 ? (
-                <tr><td colSpan={8} className="text-center py-16 text-gray-400">No orders found</td></tr>
+                <tr>
+                  <td colSpan={8} className="py-20 text-center">
+                    <Package className="w-10 h-10 mx-auto mb-3 text-[var(--text-faint)] opacity-40" />
+                    <p className="text-[var(--text-muted)] text-sm">No orders found</p>
+                  </td>
+                </tr>
               ) : orders.map(order => (
-                <tr key={order.id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-4 py-3 font-semibold text-gray-900 text-sm">#{order.id.slice(-8).toUpperCase()}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 hidden md:table-cell">{order.user?.name ?? '—'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-500 hidden lg:table-cell">{formatDate(order.createdAt)}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 hidden md:table-cell">{order.items?.length ?? 0}</td>
-                  <td className="px-4 py-3 font-bold text-gray-900 text-sm">{formatPrice(order.totalAmount)}</td>
-                  <td className="px-4 py-3 hidden sm:table-cell"><StatusBadge status={order.paymentStatus} type="payment" /></td>
-                  <td className="px-4 py-3"><StatusBadge status={order.orderStatus} type="order" /></td>
+                <tr key={order.id} className="hover:bg-[var(--hover-bg)] transition-colors">
+                  <td className="px-4 py-3 font-semibold text-[var(--text-heading)] text-sm font-mono">
+                    #{order.id.slice(-8).toUpperCase()}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-[var(--text-body)] hidden md:table-cell">
+                    {order.user?.name ?? '—'}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-[var(--text-muted)] hidden lg:table-cell">
+                    {formatDate(order.createdAt)}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-[var(--text-body)] hidden md:table-cell">
+                    {order.items?.length ?? 0}
+                  </td>
+                  <td className="px-4 py-3 font-bold text-[var(--text-heading)] text-sm">
+                    {formatPrice(order.totalAmount)}
+                  </td>
+                  <td className="px-4 py-3 hidden sm:table-cell">
+                    <StatusBadge status={order.paymentStatus} type="payment" />
+                  </td>
                   <td className="px-4 py-3">
-                    <Link href={`/admin/orders/${order.id}`} className="text-xs text-blue-600 font-medium hover:text-blue-700">View</Link>
+                    <StatusBadge status={order.orderStatus} type="order" />
+                  </td>
+                  <td className="px-4 py-3">
+                    <Link href={`/admin/orders/${order.id}`}
+                      className="text-xs font-semibold text-purple-600 hover:text-purple-700 transition-colors">
+                      View
+                    </Link>
                   </td>
                 </tr>
               ))}
