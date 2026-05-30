@@ -54,7 +54,7 @@ interface Props {
   serviceTitle: string;
 }
 
-export function ServiceClient({ category, serviceTitle }: Props) {
+export function ServiceClient({ category, serviceTitle: _serviceTitle }: Props) {
   const faqs = CATEGORY_FAQS[category] ?? DEFAULT_FAQS;
   const [open, setOpen] = useState<number | null>(0);
 

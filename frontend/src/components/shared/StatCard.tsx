@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface StatCardProps {

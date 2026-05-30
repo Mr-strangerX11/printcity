@@ -2,11 +2,10 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import {
-  Package, DollarSign, TrendingUp, TrendingDown, Eye, Plus, AlertCircle,
-  ArrowUpRight, Star, Clock, BarChart2, ShoppingBag, ChevronRight,
-  Lightbulb, MessageSquare, RefreshCw, CheckCircle, Target,
+  Package, DollarSign, Eye, Plus,
+  ArrowUpRight, BarChart2, ShoppingBag, ChevronRight,
+  Lightbulb, Target,
 } from 'lucide-react';
 import {
   LineChart, Line, PieChart, Pie, Cell,
@@ -17,20 +16,14 @@ import {
   useVendorSales, useVendorOrdersByStatus, useOrders,
 } from '@/hooks';
 import { useAuth } from '@/context/AuthContext';
-import { reviewsApi, ordersApi } from '@/lib/api';
 import { formatPrice, formatDate } from '@/lib/utils';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { StatCard, ChartContainer, SkeletonLoader, AlertCard } from '@/components/shared';
-import { toast } from 'sonner';
 import type { Period } from '@/hooks';
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING: '#f59e0b', CONFIRMED: '#3b82f6', PRINTING: '#8b5cf6',
   SHIPPED: '#06b6d4', DELIVERED: '#22c55e', CANCELLED: '#ef4444',
-};
-
-const TIER_COLORS: Record<string, string> = {
-  BRONZE: 'text-amber-700', SILVER: 'text-slate-600', GOLD: 'text-yellow-600', PLATINUM: 'text-purple-600',
 };
 
 // ── Performance Suggestion card ────────────────────────────────────────────────
@@ -77,16 +70,6 @@ export default function VendorDashboard() {
     { value: '90d', label: '90 days' },
   ];
 
-  const trendBadge = (v?: string) => {
-    if (!v) return null;
-    const pos = !v.startsWith('-');
-    return (
-      <span className={`flex items-center gap-0.5 text-xs font-bold ${pos ? 'text-green-600' : 'text-red-500'}`}>
-        {pos ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-        {v}
-      </span>
-    );
-  };
 
   if (loading) return (
     <div className="space-y-4"><SkeletonLoader variant="card" count={4} /></div>

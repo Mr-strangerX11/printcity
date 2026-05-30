@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff, Loader2, Printer, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, Loader2, CheckCircle2, ArrowRight } from 'lucide-react';
 import { authApi } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';

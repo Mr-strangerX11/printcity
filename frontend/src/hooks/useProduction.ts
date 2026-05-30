@@ -28,7 +28,7 @@ export function usePrintJobs(
   params: ProductionParams = {},
   options?: { ttl?: number; enabled?: boolean },
 ): FetchState<PrintJobListResult> {
-  const stableParams = useMemo(() => params, [JSON.stringify(params)]); // eslint-disable-line react-hooks/exhaustive-deps
+  const stableParams = useMemo(() => params, [JSON.stringify(params)]); // JSON.stringify stabilises object identity
   const cacheKey = `print-jobs:${JSON.stringify(stableParams)}`;
 
   return useFetch<PrintJobListResult>(
@@ -58,7 +58,7 @@ export function useQualityChecks(
   params: ProductionParams = {},
   options?: { ttl?: number; enabled?: boolean },
 ): FetchState<QualityCheck[]> {
-  const stableParams = useMemo(() => params, [JSON.stringify(params)]); // eslint-disable-line react-hooks/exhaustive-deps
+  const stableParams = useMemo(() => params, [JSON.stringify(params)]); // JSON.stringify stabilises object identity
   const cacheKey = `qc:${JSON.stringify(stableParams)}`;
 
   return useFetch<QualityCheck[]>(
@@ -76,7 +76,7 @@ export function useShipments(
   params: ProductionParams = {},
   options?: { ttl?: number; enabled?: boolean },
 ): FetchState<Shipment[]> {
-  const stableParams = useMemo(() => params, [JSON.stringify(params)]); // eslint-disable-line react-hooks/exhaustive-deps
+  const stableParams = useMemo(() => params, [JSON.stringify(params)]); // JSON.stringify stabilises object identity
   const cacheKey = `shipments:${JSON.stringify(stableParams)}`;
 
   return useFetch<Shipment[]>(

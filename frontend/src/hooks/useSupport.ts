@@ -1,7 +1,7 @@
 'use client';
 
 import { supportApi } from '@/lib/api';
-import { SupportTicket, PaginatedResponse } from '@/types';
+import { SupportTicket } from '@/types';
 import { useFetch, FetchState } from './useFetch';
 
 export interface SupportParams {
@@ -9,11 +9,6 @@ export interface SupportParams {
   priority?: string;
   page?: number;
   limit?: number;
-}
-
-interface TicketListResult {
-  items?: SupportTicket[];
-  meta?: PaginatedResponse<SupportTicket>['meta'];
 }
 
 interface SupportStats {

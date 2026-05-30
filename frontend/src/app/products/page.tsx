@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 
 import React, { Suspense, useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { X, SlidersHorizontal, Search, LayoutGrid, List, Package } from 'lucide-react';
+import { X, SlidersHorizontal, Package } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
 import { CategoryBar } from '@/components/layout/CategoryBar';
 import { Footer } from '@/components/layout/Footer';

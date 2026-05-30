@@ -1,6 +1,5 @@
 'use client';
 
-import { useMemo } from 'react';
 import { analyticsApi } from '@/lib/api';
 import { useFetch, FetchState } from './useFetch';
 

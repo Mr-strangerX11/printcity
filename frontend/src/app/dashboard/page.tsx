@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import {
   Package, Upload, ShoppingCart, Heart, Star, Gift, Users, Copy,
-  CheckCircle, Check, AlertTriangle, Zap, TrendingUp, Share2,
+  Check, Share2,
   MessageSquare, MapPin, CreditCard, Phone, Camera, Shield,
 } from 'lucide-react';
 import { useOrders } from '@/hooks';
@@ -17,7 +17,7 @@ import { useProducts } from '@/hooks';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { notificationsApi, loyaltyApi } from '@/lib/api';
-import { formatPrice, formatDate, formatRelative } from '@/lib/utils';
+import { formatPrice, formatDate } from '@/lib/utils';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { StatCard } from '@/components/shared';
 import { NotificationBell } from '@/components/shared';

@@ -77,8 +77,7 @@ export function useFetch<T>(
         await sleep(RETRY_BASE_DELAY * 2 ** (attemptRef.current - 1));
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, cacheKey, ttl, retries, ...deps]);
+  }, [enabled, cacheKey, ttl, retries, ...deps]); // deps spread intentional
 
   useEffect(() => { run(); }, [run]);
 

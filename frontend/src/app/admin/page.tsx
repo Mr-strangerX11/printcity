@@ -3,10 +3,10 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import {
-  ShoppingBag, Users, DollarSign, Package, AlertCircle, Clock,
-  CheckCircle, XCircle, TrendingUp, TrendingDown, ArrowUpRight,
-  Activity, Database, CreditCard, Mail, Server, RefreshCw,
-  AlertTriangle, Zap, BarChart2, Target,
+  ShoppingBag, Users, DollarSign, Package,
+  CheckCircle, XCircle, ArrowUpRight,
+  Activity, Database, CreditCard, Mail, Server,
+  Zap, BarChart2, Target,
 } from 'lucide-react';
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
@@ -31,8 +31,6 @@ const STATUS_COLORS: Record<string, string> = {
   CANCELLED: '#ef4444', REFUNDED: '#6b7280',
 };
 
-const HEALTH_COLOR = (status: string) =>
-  status === 'operational' || status === 'healthy' ? 'text-green-600' : 'text-red-500';
 
 export default function AdminDashboard() {
   const [period, setPeriod] = useState<Period>('30d');
@@ -60,8 +58,6 @@ export default function AdminDashboard() {
   const totalOrders = kpis?.orders?.current ?? (orderStats as any)?.totalOrders ?? ordersData?.meta?.total ?? 0;
   const pendingCount = kpis?.pendingOrders ?? (orderStats as any)?.pendingOrders ?? 0;
   const pendingVendorCount = Array.isArray(pendingVendors) ? pendingVendors.length : 0;
-  const productsTotal = productsData?.meta?.total ?? 0;
-
   // Alerts derived from existing data
   const alerts = [
     pendingCount > 0 && { id: 'pending-orders', priority: 'warning' as const, title: `${pendingCount} orders pending`, message: 'Orders waiting for confirmation', actionLabel: 'View Orders', actionHref: '/admin/orders?status=PENDING' },
