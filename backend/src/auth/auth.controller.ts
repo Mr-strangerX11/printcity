@@ -3,7 +3,7 @@ import { Response, Request } from 'express';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ListUsersDto } from './dto/list-users.dto';
 import { AuthService } from './auth.service';
-import { Throttle } from '@nestjs/throttler';
+import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -37,14 +37,14 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Public()
-  @Throttle({ default: { ttl: 60000, limit: 5 } })
+  @Throttle({ default: { ttl: 60000, limit: 20 } })
   @Post('register')
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
 
   @Public()
-  @Throttle({ default: { ttl: 60000, limit: 10 } })
+  @Throttle({ default: { ttl: 60000, limit: 30 } })
   @Post('login')
   async login(
     @Body() dto: LoginDto,
@@ -77,14 +77,16 @@ export class AuthController {
     return { success: true };
   }
 
-  /** Mint a CSRF token — call this once after login before any state-changing request. */
+  /** Mint a CSRF token — called on every page load, must not be rate-limited. */
   @Public()
+  @SkipThrottle()
   @Get('csrf-token')
   csrfToken(@Res({ passthrough: true }) res: Response) {
     const token = CsrfGuard.issueToken(res, IS_PROD);
     return { csrfToken: token };
   }
 
+  @SkipThrottle()
   @UseGuards(JwtAuthGuard)
   @Get('me')
   me(@CurrentUser('id') userId: string) {

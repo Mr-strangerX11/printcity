@@ -52,7 +52,7 @@ import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 300 }]),
     MongooseModule.forRoot(process.env.DATABASE_URL || 'mongodb://localhost/printcity'),
     MongooseModule.forFeature([
       { name: AuditLog.name, schema: AuditLogSchema },

@@ -1,11 +1,10 @@
 import axios from 'axios';
 
-// In dev the Next.js rewrite proxy forwards /api → localhost:4000/api.
-// In production rewrites are disabled, so use the absolute backend URL directly.
-const API_URL =
-  typeof window !== 'undefined' && process.env.NODE_ENV !== 'production'
-    ? '/api'
-    : (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api');
+// Always use NEXT_PUBLIC_API_URL in production.
+// In development, Next.js rewrites /api → localhost:4000/api (next.config.ts).
+const API_URL = process.env.NODE_ENV === 'production'
+  ? (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api')
+  : '/api';
 
 export const api = axios.create({
   baseURL: API_URL,

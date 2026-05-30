@@ -44,7 +44,7 @@ import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
-    ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 300 }]),
     MongooseModule.forRoot(process.env.DATABASE_URL as string),
     MongooseModule.forFeature([{ name: AuditLog.name, schema: AuditLogSchema }]),
     MailModule,
