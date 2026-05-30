@@ -10,85 +10,97 @@ const CATEGORIES = [
     name: 'Digital Print',
     slug: 'digital-print',
     subcategories: [
-      'Flyer Printing',
+      'Flyer',
+      'Visiting Card',
+      'Note Book',
+      'Certificate',
+      'Cable / Stickers',
+      'Marriage Card Print',
+      'Invitation Card Print',
+      'Calendar Print',
       'Brochure Printing',
-      'Name Card Printing',
-      'Sticker Printing',
-      'Booklet Printing',
-      'Postcard Printing',
-      'Ticket & Voucher Printing',
-      'Calendar Printing',
-      'Corporate Folder Printing',
-      'Tissue Printing',
-      'Customised Print',
+      'Ticket Printing',
+      'Corporate Folder',
+      'Customized Printing',
+      'Document Printing',
     ],
   },
   {
     name: 'Large Format',
     slug: 'large-format',
     subcategories: [
-      'Poster Printing',
-      'Pull Up Banner',
-      'Pop Up Display',
-      'Floor Sticker Printing',
+      'Flex Print',
+      'Vinyl / Sticker Print',
+      'Canvas Print',
+      'Mural Print',
+      'One Way Vision',
+      'Pull-Up Banner',
       'Display Standee',
-      'POSM Display',
       'Installation Service',
     ],
   },
   {
-    name: 'Events',
-    slug: 'events',
+    name: 'Stamp / Bill Pad',
+    slug: 'stamp-bill-pad',
     subcategories: [
-      'Stage Backdrop',
-      '3D Cube Printing',
-      'Diecut Standee',
-      'Events & Exhibition Setup',
+      'Circle Self Ink Stamp',
+      'Rectangle Self Ink Stamp',
+      'B/W Pan Bill Printing',
+      'Color Pan Bill Printing',
+      'B/W VAT Bill Printing',
+      'Color VAT Bill Printing',
     ],
   },
   {
-    name: 'Apparel',
-    slug: 'apparel',
+    name: 'ID Card / Lanyard',
+    slug: 'id-card-lanyard',
+    subcategories: [
+      'Matt ID Card Printing',
+      'PVC ID Card Printing',
+      'RFID Card Printing',
+      '16mm Lanyard Printing',
+      '20mm Lanyard Printing',
+      '25mm Lanyard Printing',
+    ],
+  },
+  {
+    name: 'Bag Print',
+    slug: 'bag-print',
+    subcategories: [
+      'Fiber Bag Printing (Non-Woven)',
+      'Paper Bag',
+    ],
+  },
+  {
+    name: 'Apparel Printing',
+    slug: 'apparel-printing',
     subcategories: [
       'T-Shirt Printing',
       'Tote Bag Printing',
-    ],
-  },
-  {
-    name: 'Product Packaging',
-    slug: 'product-packaging',
-    subcategories: [
-      'Product Packaging & Box Printing',
-    ],
-  },
-  {
-    name: 'Logo Print',
-    slug: 'logo-print',
-    subcategories: [
-      'Logo Printing',
-    ],
-  },
-  {
-    name: '3D Print',
-    slug: '3d-print',
-    subcategories: [
-      '3D Printing Service',
+      'Sacks Printing',
     ],
   },
   {
     name: 'Shop',
     slug: 'shop',
+    href: '/products',
     subcategories: [],
   },
   {
     name: 'Contact',
     slug: 'contact',
+    href: '/contact',
     subcategories: [],
-  }
+  },
 ];
 
 function toSlug(name: string) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
+
+function catHref(cat: typeof CATEGORIES[number]) {
+  if ('href' in cat && cat.href) return cat.href;
+  return `/products?category=${cat.slug}`;
 }
 
 export function CategoryBar() {
@@ -116,11 +128,11 @@ export function CategoryBar() {
             <div
               key={cat.slug}
               className="relative"
-              onMouseEnter={() => handleEnter(i)}
-              onMouseLeave={handleLeave}
+              onMouseEnter={() => cat.subcategories.length > 0 ? handleEnter(i) : undefined}
+              onMouseLeave={cat.subcategories.length > 0 ? handleLeave : undefined}
             >
               <Link
-                href={`/products?category=${cat.slug}`}
+                href={catHref(cat)}
                 className={cn(
                   'flex items-center gap-1 px-3.5 py-3 text-sm font-medium whitespace-nowrap transition-colors',
                   activeIndex === i
@@ -142,7 +154,7 @@ export function CategoryBar() {
 
               {cat.subcategories.length > 0 && activeIndex === i && (
                 <div
-                  className="absolute left-0 top-full min-w-[220px] rounded-xl shadow-2xl py-1.5 z-50"
+                  className="absolute left-0 top-full min-w-[230px] rounded-xl shadow-2xl py-1.5 z-50"
                   style={{
                     background: 'var(--surface)',
                     border: '1px solid var(--border-color)',
@@ -154,7 +166,7 @@ export function CategoryBar() {
                   {cat.subcategories.map((sub) => (
                     <Link
                       key={sub}
-                      href={`/services/${toSlug(sub)}`}
+                      href={`/products?category=${cat.slug}&sub=${toSlug(sub)}`}
                       className="block px-4 py-2 text-sm whitespace-nowrap transition-colors hover:bg-[var(--hover-bg)] hover:text-purple-500 dark:hover:text-purple-400"
                       style={{ color: 'var(--text-body)' }}
                     >
@@ -174,7 +186,7 @@ export function CategoryBar() {
           {CATEGORIES.map((cat) => (
             <Link
               key={cat.slug}
-              href={`/products?category=${cat.slug}`}
+              href={catHref(cat)}
               className="flex-shrink-0 px-3 py-2 text-xs font-medium rounded-full whitespace-nowrap transition-colors hover:bg-[var(--hover-bg)] hover:text-purple-500"
               style={{ color: 'var(--text-body)' }}
             >
