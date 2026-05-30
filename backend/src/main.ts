@@ -19,10 +19,22 @@ const ActiveModule = (process.env.VERCEL || !process.env.REDIS_URL) ? AppLambdaM
 export async function createNestApp(AppModuleClass = ActiveModule): Promise<NestExpressApplication> {
   const expressApp = express();
   
-  // Health check endpoint BEFORE app initialization (responds immediately)
-  expressApp.get('/health', (req, res) => {
+  // Root info + health — respond before NestJS initialises (no 404 on bare domain)
+  expressApp.get('/', (_req, res) => {
+    res.json({
+      name: 'PrintCity API',
+      version: '1.0.0',
+      status: 'running',
+      docs: '/docs',
+      health: '/health',
+    });
+  });
+  expressApp.get('/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
+  // Silence browser favicon requests
+  expressApp.get('/favicon.ico', (_req, res) => res.status(204).end());
+  expressApp.get('/favicon.png', (_req, res) => res.status(204).end());
 
   const adapter = new ExpressAdapter(expressApp);
 
