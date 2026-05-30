@@ -131,26 +131,37 @@ export function CategoryBar() {
               onMouseEnter={() => cat.subcategories.length > 0 ? handleEnter(i) : undefined}
               onMouseLeave={cat.subcategories.length > 0 ? handleLeave : undefined}
             >
-              <Link
-                href={catHref(cat)}
-                className={cn(
-                  'flex items-center gap-1 px-3.5 py-3 text-sm font-medium whitespace-nowrap transition-colors',
-                  activeIndex === i
-                    ? 'text-purple-500 dark:text-purple-400'
-                    : 'hover:text-purple-500 dark:hover:text-purple-400'
-                )}
-                style={{ color: activeIndex === i ? undefined : 'var(--text-body)' }}
-              >
-                {cat.name}
-                {cat.subcategories.length > 0 && (
-                  <ChevronDown
-                    className={cn(
-                      'w-3.5 h-3.5 transition-transform duration-200',
-                      activeIndex === i && 'rotate-180'
-                    )}
-                  />
-                )}
-              </Link>
+              {cat.slug === 'contact' ? (
+                /* Contact — styled as a filled button */
+                <Link
+                  href="/contact"
+                  className="ml-2 flex items-center gap-1.5 px-4 py-2 text-sm font-bold whitespace-nowrap rounded-lg text-white transition-all hover:opacity-90 hover:scale-[1.03] active:scale-[0.97]"
+                  style={{ background: 'linear-gradient(135deg,#7C3AED,#2563EB)' }}
+                >
+                  {cat.name}
+                </Link>
+              ) : (
+                <Link
+                  href={catHref(cat)}
+                  className={cn(
+                    'flex items-center gap-1 px-3.5 py-3 text-sm font-medium whitespace-nowrap transition-colors',
+                    activeIndex === i
+                      ? 'text-purple-500 dark:text-purple-400'
+                      : 'hover:text-purple-500 dark:hover:text-purple-400'
+                  )}
+                  style={{ color: activeIndex === i ? undefined : 'var(--text-body)' }}
+                >
+                  {cat.name}
+                  {cat.subcategories.length > 0 && (
+                    <ChevronDown
+                      className={cn(
+                        'w-3.5 h-3.5 transition-transform duration-200',
+                        activeIndex === i && 'rotate-180'
+                      )}
+                    />
+                  )}
+                </Link>
+              )}
 
               {cat.subcategories.length > 0 && activeIndex === i && (
                 <div
@@ -184,14 +195,25 @@ export function CategoryBar() {
       <div className="md:hidden overflow-x-auto scrollbar-none px-4">
         <div className="flex items-center gap-1 py-1">
           {CATEGORIES.map((cat) => (
-            <Link
-              key={cat.slug}
-              href={catHref(cat)}
-              className="flex-shrink-0 px-3 py-2 text-xs font-medium rounded-full whitespace-nowrap transition-colors hover:bg-[var(--hover-bg)] hover:text-purple-500"
-              style={{ color: 'var(--text-body)' }}
-            >
-              {cat.name}
-            </Link>
+            cat.slug === 'contact' ? (
+              <Link
+                key={cat.slug}
+                href="/contact"
+                className="flex-shrink-0 px-4 py-2 text-xs font-bold rounded-full whitespace-nowrap text-white transition-all hover:opacity-90"
+                style={{ background: 'linear-gradient(135deg,#7C3AED,#2563EB)' }}
+              >
+                {cat.name}
+              </Link>
+            ) : (
+              <Link
+                key={cat.slug}
+                href={catHref(cat)}
+                className="flex-shrink-0 px-3 py-2 text-xs font-medium rounded-full whitespace-nowrap transition-colors hover:bg-[var(--hover-bg)] hover:text-purple-500"
+                style={{ color: 'var(--text-body)' }}
+              >
+                {cat.name}
+              </Link>
+            )
           ))}
         </div>
       </div>
