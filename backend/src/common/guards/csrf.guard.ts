@@ -3,6 +3,7 @@ import {
   ExecutionContext,
   ForbiddenException,
   Injectable,
+  SetMetadata,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { randomBytes } from 'crypto';
@@ -11,9 +12,7 @@ import { Request, Response } from 'express';
 export const SKIP_CSRF_KEY = 'skipCsrf';
 
 /** Mark a route as CSRF-exempt (e.g. webhooks with their own signature checks). */
-export const SkipCsrf = () =>
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  require('@nestjs/common').SetMetadata(SKIP_CSRF_KEY, true);
+export const SkipCsrf = () => SetMetadata(SKIP_CSRF_KEY, true);
 
 /**
  * Double-submit cookie CSRF guard.

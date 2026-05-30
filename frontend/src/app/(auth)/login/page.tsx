@@ -56,16 +56,6 @@ export default function LoginPage() {
         </div>
 
         <div className="rounded-3xl p-8 shadow-sm" style={{ background: 'var(--surface)', border: '1px solid var(--border-color)' }}>
-          {/* Demo Credentials */}
-          <div className="mb-6 p-4 bg-blue-50 rounded-2xl border border-blue-100">
-            <p className="text-xs font-semibold text-blue-700 mb-2">Demo Accounts</p>
-            <div className="space-y-1 text-xs text-blue-600">
-              <p>Admin: admin@PrintCity.com / Admin@123</p>
-              <p>Vendor: vendor1@PrintCity.com / Vendor@123</p>
-              <p>Customer: customer@PrintCity.com / Customer@123</p>
-            </div>
-          </div>
-
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Email</label>
@@ -102,10 +92,15 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="text-center text-sm text-gray-500 mt-6">
-            Don't have an account?{' '}
-            <Link href="/register" className="text-blue-600 font-semibold hover:text-blue-700">Sign up free</Link>
-          </p>
+          <div className="flex items-center justify-between mt-6">
+            <p className="text-sm text-gray-500">
+              Don't have an account?{' '}
+              <Link href="/register" className="text-blue-600 font-semibold hover:text-blue-700">Sign up free</Link>
+            </p>
+            <Link href="/forgot-password" className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
+              Forgot password?
+            </Link>
+          </div>
         </div>
       </div>
       </div>

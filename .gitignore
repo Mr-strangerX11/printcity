@@ -6,8 +6,11 @@ dist
 .next
 build
 *.log
+*.tmp
 .DS_Store
 .turbo
 coverage
 prisma/migrations/dev_*
 .vercel
+backend/uploads/
+uploads/
