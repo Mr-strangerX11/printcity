@@ -12,5 +12,7 @@ build
 coverage
 prisma/migrations/dev_*
 .vercel
+.npmrc
 backend/uploads/
 uploads/
+docs/
