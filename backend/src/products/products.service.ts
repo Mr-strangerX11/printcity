@@ -142,9 +142,20 @@ export class ProductsService {
     return { ...product, images, variants, vendor, category };
   }
 
-  async create(dto: CreateProductDto, userId: string) {
-    const vendor = await this.vendorModel.findOne({ userId: new Types.ObjectId(userId) }).exec();
-    if (!vendor) throw new ForbiddenException('Vendor profile not found');
+  async create(dto: CreateProductDto, userId: string, role?: Role) {
+    let vendor: any;
+    if (role === Role.ADMIN) {
+      if (dto.vendorId) {
+        vendor = await this.vendorModel.findById(dto.vendorId).exec();
+        if (!vendor) throw new BadRequestException('Vendor not found');
+      } else {
+        vendor = await this.vendorModel.findOne({ status: 'ACTIVE' }).exec();
+        if (!vendor) throw new BadRequestException('No active vendor found');
+      }
+    } else {
+      vendor = await this.vendorModel.findOne({ userId: new Types.ObjectId(userId) }).exec();
+      if (!vendor) throw new ForbiddenException('Vendor profile not found');
+    }
 
     const slug = await this.generateUniqueSlug(dto.title);
 
@@ -155,7 +166,7 @@ export class ProductsService {
       slug,
       description: sanitizeRichText(dto.description),
       basePrice: dto.basePrice,
-      status: ProductStatus.PENDING_APPROVAL,
+      status: role === Role.ADMIN ? ProductStatus.ACTIVE : ProductStatus.PENDING_APPROVAL,
       tags: dto.tags ?? [],
     });
 
@@ -201,6 +212,23 @@ export class ProductsService {
     ]);
 
     return { ...updated, variants, images };
+  }
+
+  async delete(id: string, userId: string, role: Role): Promise<void> {
+    const product = await this.productModel.findById(id).lean().exec();
+    if (!product) throw new NotFoundException('Product not found');
+
+    if (role === Role.VENDOR) {
+      const vendor = await this.vendorModel.findById(product.vendorId).lean().exec();
+      if (!vendor || vendor.userId.toString() !== userId) throw new ForbiddenException();
+    }
+
+    await Promise.all([
+      this.productModel.findByIdAndDelete(id).exec(),
+      this.variantModel.deleteMany({ productId: new Types.ObjectId(id) }).exec(),
+      this.imageModel.deleteMany({ productId: new Types.ObjectId(id) }).exec(),
+      this.wishlistItemModel.deleteMany({ productId: new Types.ObjectId(id) }).exec(),
+    ]);
   }
 
   async importCsv(fileBuffer: Buffer, adminId: string): Promise<{ created: number; errors: string[] }> {

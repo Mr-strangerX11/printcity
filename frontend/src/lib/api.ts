@@ -100,6 +100,7 @@ export const productsApi = {
   get: (slug: string) => api.get(`/products/${slug}`),
   create: (data: any) => api.post('/products', data),
   update: (id: string, data: any) => api.patch(`/products/${id}`, data),
+  delete: (id: string) => api.delete(`/products/${id}`),
   importCsv: (file: File) => {
     const form = new FormData();
     form.append('file', file);

@@ -3,12 +3,15 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Body,
   Param,
   Query,
   UseGuards,
   UseInterceptors,
   UploadedFile,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ProductsService } from './products.service';
@@ -45,8 +48,23 @@ export class ProductsController {
 
   @Post()
   @Roles(Role.VENDOR, Role.ADMIN)
-  create(@Body() dto: CreateProductDto, @CurrentUser('id') userId: string) {
-    return this.productsService.create(dto, userId);
+  create(
+    @Body() dto: CreateProductDto,
+    @CurrentUser('id') userId: string,
+    @CurrentUser('role') role: Role,
+  ) {
+    return this.productsService.create(dto, userId, role);
+  }
+
+  @Delete(':id')
+  @Roles(Role.ADMIN, Role.VENDOR)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  delete(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: string,
+    @CurrentUser('role') role: Role,
+  ) {
+    return this.productsService.delete(id, userId, role);
   }
 
   @Patch(':id')
