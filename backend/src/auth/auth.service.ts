@@ -207,6 +207,33 @@ export class AuthService {
     return { message: 'OTP resent successfully' };
   }
 
+  async forgotPassword(email: string) {
+    const user = await this.users.findByEmail(email);
+    // Always return success to prevent email enumeration
+    if (!user) return { message: 'If that email exists, a reset code has been sent.' };
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+    await this.users.update(user.id, { verificationOtp: otp, verificationOtpExpiry: expiry } as any);
+    await this.mail.sendPasswordResetOtp(user.email, user.name, otp);
+    return { message: 'If that email exists, a reset code has been sent.' };
+  }
+
+  async resetPassword(email: string, otp: string, newPassword: string) {
+    const user = await this.users.findByEmail(email);
+    if (!user) throw new BadRequestException('Invalid or expired reset code.');
+    if (!user.verificationOtp || user.verificationOtp !== otp)
+      throw new BadRequestException('Invalid or expired reset code.');
+    if (user.verificationOtpExpiry && user.verificationOtpExpiry < new Date())
+      throw new BadRequestException('Reset code has expired. Please request a new one.');
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await this.users.update(user.id, {
+      passwordHash,
+      verificationOtp: undefined,
+      verificationOtpExpiry: undefined,
+    } as any);
+    return { message: 'Password reset successfully. You can now log in.' };
+  }
+
   async createVendorByAdmin(dto: { name: string; email: string; password: string; storeName: string }) {
     const existing = await this.users.findByEmail(dto.email);
     if (existing) throw new ConflictException('Email already registered');

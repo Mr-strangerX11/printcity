@@ -459,6 +459,30 @@ export class MailService implements OnModuleInit {
     await this.sendCritical(to, 'Your Print City verification code', html);
   }
 
+  async sendPasswordResetOtp(to: string, name: string, otp: string) {
+    const html = `
+    <div style="max-width:480px;margin:40px auto;font-family:'Helvetica Neue',Arial,sans-serif;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+      <div style="background:linear-gradient(135deg,#7C3AED,#2563EB);padding:32px 40px;">
+        <div style="font-size:22px;font-weight:900;color:#fff;">Print City</div>
+        <div style="margin-top:12px;font-size:20px;font-weight:700;color:#fff;">Reset your password</div>
+      </div>
+      <div style="padding:32px 40px;">
+        <p style="color:#374151;font-size:15px;">Hi <strong>${name}</strong>,</p>
+        <p style="color:#6B7280;font-size:14px;">Use the code below to reset your password. It expires in <strong>10 minutes</strong>.</p>
+        <div style="margin:24px 0;text-align:center;">
+          <div style="display:inline-block;background:#F5F3FF;border:2px dashed #7C3AED;border-radius:12px;padding:18px 40px;">
+            <span style="font-size:36px;font-weight:900;letter-spacing:10px;color:#7C3AED;">${otp}</span>
+          </div>
+        </div>
+        <p style="color:#9CA3AF;font-size:12px;text-align:center;">If you didn't request a password reset, you can safely ignore this email.</p>
+      </div>
+      <div style="background:#F9FAFB;border-top:1px solid #E5E7EB;padding:16px 40px;text-align:center;">
+        <p style="font-size:11px;color:#9CA3AF;margin:0;">© ${new Date().getFullYear()} Print City · Kathmandu, Nepal</p>
+      </div>
+    </div>`;
+    await this.sendCritical(to, 'Your Print City password reset code', html);
+  }
+
   async sendWishlistPriceAlert(to: string, name: string, items: { title: string; oldPrice: number; newPrice: number; slug: string }[]) {
     const frontendUrl = this.config.get('FRONTEND_URL', 'http://localhost:3000').split(',')[0].trim();
     const fmt = (n: number) => `Rs. ${n.toLocaleString('en-NP', { minimumFractionDigits: 0 })}`;

@@ -12,7 +12,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import { Role } from '../user/schemas/user.schema';
-import { CsrfGuard } from '../common/guards/csrf.guard';
+import { CsrfGuard, SkipCsrf } from '../common/guards/csrf.guard';
 
 const IS_PROD = process.env.NODE_ENV === 'production';
 
@@ -37,6 +37,7 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Public()
+  @SkipCsrf()
   @Throttle({ default: { ttl: 60000, limit: 20 } })
   @Post('register')
   register(@Body() dto: RegisterDto) {
@@ -44,6 +45,7 @@ export class AuthController {
   }
 
   @Public()
+  @SkipCsrf()
   @Throttle({ default: { ttl: 60000, limit: 30 } })
   @Post('login')
   async login(
@@ -56,7 +58,8 @@ export class AuthController {
   }
 
   @Public()
-  @Throttle({ default: { ttl: 60000, limit: 10 } })
+  @SkipCsrf()
+  @SkipThrottle()
   @Post('refresh')
   async refresh(
     @Req() req: Request,
@@ -69,6 +72,8 @@ export class AuthController {
   }
 
   @Public()
+  @SkipCsrf()
+  @SkipThrottle()
   @Post('logout')
   logout(@Res({ passthrough: true }) res: Response) {
     res.clearCookie('accessToken', { httpOnly: true, secure: IS_PROD, sameSite: IS_PROD ? 'none' : 'lax' });
@@ -134,6 +139,26 @@ export class AuthController {
   @Post('resend-otp')
   resendOtp(@Body('email') email: string) {
     return this.authService.resendOtp(email);
+  }
+
+  @Public()
+  @SkipCsrf()
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
+  @Post('forgot-password')
+  forgotPassword(@Body('email') email: string) {
+    return this.authService.forgotPassword(email);
+  }
+
+  @Public()
+  @SkipCsrf()
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
+  @Post('reset-password')
+  resetPassword(
+    @Body('email') email: string,
+    @Body('otp') otp: string,
+    @Body('newPassword') newPassword: string,
+  ) {
+    return this.authService.resetPassword(email, otp, newPassword);
   }
 
   @Roles(Role.ADMIN)

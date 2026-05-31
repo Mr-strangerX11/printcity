@@ -34,7 +34,11 @@ api.interceptors.response.use(
   (res) => res,
   async (error) => {
     const original = error.config;
-    if (error.response?.status === 401 && !original._retry) {
+    // Don't attempt refresh for auth-probe endpoints — a 401 there just means
+    // the user is not logged in, not that the access token has expired.
+    const url: string = original.url ?? '';
+    const isAuthProbe = url.includes('/auth/me') || url.includes('/auth/refresh');
+    if (error.response?.status === 401 && !original._retry && !isAuthProbe) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           refreshQueue.push({
@@ -54,9 +58,11 @@ api.interceptors.response.use(
       } catch (refreshErr) {
         refreshQueue.forEach(({ reject }) => reject(refreshErr));
         refreshQueue = [];
-        // Clear server-side cookies, then redirect — but never redirect when
-        // already on an auth page (prevents the /login → 401 → /login reload loop)
+        // Clear server-side cookies, re-mint CSRF token, then redirect.
+        // Re-minting ensures the login form works immediately without a page reload.
+        // Never redirect when already on an auth page (prevents reload loop).
         try { await api.post('/auth/logout'); } catch { /* ignore */ }
+        try { await api.get('/auth/csrf-token'); } catch { /* ignore */ }
         if (typeof window !== 'undefined') {
           const AUTH_PATHS = ['/login', '/register', '/verify-email', '/forgot-password'];
           const onAuthPage = AUTH_PATHS.some(p => window.location.pathname.startsWith(p));
@@ -79,6 +85,9 @@ export const authApi = {
   updateProfile: (data: any) => api.patch('/auth/me', data),
   verifyOtp: (email: string, otp: string) => api.post('/auth/verify-otp', { email, otp }),
   resendOtp: (email: string) => api.post('/auth/resend-otp', { email }),
+  forgotPassword: (email: string) => api.post('/auth/forgot-password', { email }),
+  resetPassword: (email: string, otp: string, newPassword: string) =>
+    api.post('/auth/reset-password', { email, otp, newPassword }),
   createVendor: (data: { name: string; email: string; password: string; storeName: string }) =>
     api.post('/auth/create-vendor', data),
 };
