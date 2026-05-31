@@ -1,7 +1,10 @@
 import type { NextConfig } from 'next';
 import { withSentryConfig } from '@sentry/nextjs';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL
+  ?? (process.env.NODE_ENV === 'production'
+      ? 'https://print-backend-chi.vercel.app/api'
+      : 'http://localhost:4000/api');
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
