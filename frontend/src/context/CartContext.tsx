@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { cartApi } from '@/lib/api';
 import { Cart } from '@/types';
 import { useAuth } from './AuthContext';
@@ -26,7 +26,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<Cart | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const refreshCart = async () => {
+  const refreshCart = useCallback(async () => {
     if (!user) { setCart(null); return; }
     try {
       setLoading(true);
@@ -37,9 +37,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
-  useEffect(() => { refreshCart(); }, [user]);
+  useEffect(() => { refreshCart(); }, [refreshCart]);
 
   const addItem = async (variantId: string, qty: number) => {
     const { data } = await cartApi.addItem(variantId, qty);

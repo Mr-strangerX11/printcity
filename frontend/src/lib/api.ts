@@ -54,9 +54,14 @@ api.interceptors.response.use(
       } catch (refreshErr) {
         refreshQueue.forEach(({ reject }) => reject(refreshErr));
         refreshQueue = [];
-        // Clear server-side cookies and redirect to login
+        // Clear server-side cookies, then redirect — but never redirect when
+        // already on an auth page (prevents the /login → 401 → /login reload loop)
         try { await api.post('/auth/logout'); } catch { /* ignore */ }
-        if (typeof window !== 'undefined') window.location.href = '/login';
+        if (typeof window !== 'undefined') {
+          const AUTH_PATHS = ['/login', '/register', '/verify-email', '/forgot-password'];
+          const onAuthPage = AUTH_PATHS.some(p => window.location.pathname.startsWith(p));
+          if (!onAuthPage) window.location.href = '/login';
+        }
         return Promise.reject(error);
       } finally {
         isRefreshing = false;
