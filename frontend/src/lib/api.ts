@@ -1,10 +1,9 @@
 import axios from 'axios';
 
-// Always use NEXT_PUBLIC_API_URL in production.
-// In development, Next.js rewrites /api → localhost:4000/api (next.config.ts).
-const API_URL = process.env.NODE_ENV === 'production'
-  ? (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api')
-  : '/api';
+// Always use the /api proxy path — Next.js rewrites /api/* → backend in all envs.
+// This keeps cookies same-origin (frontend domain) so auth works reliably
+// without SameSite=None cross-origin cookie requirements.
+const API_URL = '/api';
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -221,7 +220,7 @@ export const invoicesApi = {
   generate: (orderId: string) => api.post(`/invoices/generate/${orderId}`),
   updateStatus: (id: string, status: string) =>
     api.patch(`/invoices/${id}/status`, null, { params: { status } }),
-  downloadUrl: (id: string) => `${typeof window !== 'undefined' ? '/api' : (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api')}/invoices/${id}/download`,
+  downloadUrl: (id: string) => `/api/invoices/${id}/download`,
 };
 
 // ─── Coupons ──────────────────────────────────────────────────────────────────

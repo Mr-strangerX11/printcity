@@ -25,8 +25,9 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '',
   },
   async rewrites() {
-    // Only proxy in local dev — in production the browser calls the API URL directly
-    if (process.env.NODE_ENV === 'production') return [];
+    // Always proxy /api/* through Next.js so cookies are set on the frontend domain.
+    // Cross-origin cookies (SameSite=None) are unreliable across browsers/extensions;
+    // the proxy makes every request same-origin → no cross-origin cookie issues.
     return [
       {
         source: '/api/:path*',
