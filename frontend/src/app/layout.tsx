@@ -18,6 +18,10 @@ export const metadata: Metadata = {
   title: { default: 'PrintCity — Custom Print Marketplace', template: '%s | PrintCity' },
   description: 'Design. Print. Deliver. Premium custom prints from top vendors.',
   keywords: ['custom print', 't-shirts', 'hoodies', 'mugs', 'print on demand'],
+  icons: {
+    icon: '/logo.png',
+    apple: '/logo.png',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -62,7 +62,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const itemCount = cart?.items.reduce((sum, i) => sum + i.qty, 0) ?? 0;
+  const itemCount = cart?.items?.reduce((sum, i) => sum + i.qty, 0) ?? 0;
 
   return (
     <CartContext.Provider value={{ cart, loading, itemCount, addItem, updateItem, removeItem, refreshCart }}>

@@ -150,7 +150,7 @@ export default function CustomerDashboard() {
           icon={<Gift className="w-5 h-5 text-purple-500" />}
           sub={tierName}
           trend={tierPoints > 0 ? { value: `${tierName} tier`, positive: true } : undefined} />
-        <StatCard label="Cart Items" value={cart?.items.length ?? 0}
+        <StatCard label="Cart Items" value={cart?.items?.length ?? 0}
           icon={<ShoppingCart className="w-5 h-5 text-green-500" />} href="/cart" />
       </div>
 
