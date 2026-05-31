@@ -116,6 +116,7 @@ export class ProductsService {
 
     const enriched = items.map(p => ({
       ...p,
+      id: p._id.toString(),
       images: imageMap.has(p._id.toString()) ? [imageMap.get(p._id.toString())] : [],
       variants: variantsByProduct.get(p._id.toString()) ?? [],
       vendor: vendorMap.get((p as any).vendorId?.toString()) ?? null,
@@ -139,7 +140,7 @@ export class ProductsService {
       product.categoryId ? this.categoryModel.findById(product.categoryId).lean().exec() : null,
     ]);
 
-    return { ...product, images, variants, vendor, category };
+    return { ...product, id: product._id.toString(), images, variants, vendor, category };
   }
 
   async create(dto: CreateProductDto, userId: string, role?: Role) {
@@ -211,7 +212,7 @@ export class ProductsService {
       this.imageModel.find({ productId: new Types.ObjectId(id) }).lean().exec(),
     ]);
 
-    return { ...updated, variants, images };
+    return { ...updated, id: (updated as any)?._id?.toString(), variants, images };
   }
 
   async delete(id: string, userId: string, role: Role): Promise<void> {
