@@ -192,6 +192,8 @@ export const uploadsApi = {
 // ─── Admin ────────────────────────────────────────────────────────────────────
 export const adminApi = {
   listUsers: (params?: any) => api.get('/auth/users', { params }),
+  updateUser: (id: string, data: { name?: string; phone?: string; isVerified?: boolean }) =>
+    api.patch(`/auth/users/${id}`, data),
   toggleUserStatus: (id: string, isActive: boolean) => api.patch(`/auth/users/${id}/status`, { isActive }),
   deleteUser: (id: string) => api.delete(`/auth/users/${id}`),
 };

@@ -110,6 +110,15 @@ export class AuthController {
   }
 
   @Roles(Role.ADMIN)
+  @Patch('users/:id')
+  updateUser(
+    @Param('id') id: string,
+    @Body() dto: { name?: string; phone?: string; isVerified?: boolean },
+  ) {
+    return this.authService.updateUserById(id, dto);
+  }
+
+  @Roles(Role.ADMIN)
   @Patch('users/:id/status')
   toggleUserStatus(@Param('id') id: string, @Body('isActive') isActive: boolean) {
     return this.authService.toggleUserStatus(id, isActive);

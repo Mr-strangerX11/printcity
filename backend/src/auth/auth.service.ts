@@ -142,6 +142,12 @@ export class AuthService {
     return this.users.findAllPaginated(query);
   }
 
+  async updateUserById(id: string, dto: { name?: string; phone?: string; isVerified?: boolean }) {
+    const user = await this.users.findById(id);
+    if (!user) throw new NotFoundException('User not found');
+    return this.users.update(id, dto as any);
+  }
+
   async toggleUserStatus(userId: string, isActive: boolean) {
     const user = await this.users.findById(userId);
     if (!user) throw new NotFoundException('User not found');
