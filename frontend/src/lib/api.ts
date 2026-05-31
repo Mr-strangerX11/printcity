@@ -34,11 +34,14 @@ api.interceptors.response.use(
   (res) => res,
   async (error) => {
     const original = error.config;
-    // Don't attempt refresh for auth-probe endpoints — a 401 there just means
-    // the user is not logged in, not that the access token has expired.
+    // Don't attempt refresh for any /auth/* endpoint:
+    //  - /auth/me      → 401 means not logged in (normal)
+    //  - /auth/login   → 401 means wrong credentials (not an expired token)
+    //  - /auth/refresh → 401 means refresh token is gone
+    //  - /auth/register, /auth/verify-otp etc. → all public, no token needed
     const url: string = original.url ?? '';
-    const isAuthProbe = url.includes('/auth/me') || url.includes('/auth/refresh');
-    if (error.response?.status === 401 && !original._retry && !isAuthProbe) {
+    const isAuthRoute = url.includes('/auth/');
+    if (error.response?.status === 401 && !original._retry && !isAuthRoute) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           refreshQueue.push({
