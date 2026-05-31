@@ -14,7 +14,6 @@ import {
 } from 'recharts';
 import { useOrders, useOrderStats } from '@/hooks';
 import { useVendors } from '@/hooks';
-import { useProducts } from '@/hooks';
 import {
   useAdminKpis, useRevenueAnalytics, useOrdersByStatus,
   useVendorsRevenue, usePaymentMethods, useSystemHealth,
@@ -42,7 +41,6 @@ export default function AdminDashboard() {
   const { data: orderStats } = useOrderStats();
   const { data: rawPendingVendors, refetch: refetchVendors } = useVendors({ status: 'PENDING', limit: 5 });
   const pendingVendors = rawPendingVendors ?? [];
-  const { data: productsData } = useProducts({ limit: 1 });
 
   // Analytics hooks — use ?? [] not = [] because useFetch returns null (not undefined) on error
   const { data: kpis, loading: kpisLoading } = useAdminKpis(period);

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import { Loader2, Camera, Store, FileImage, AlignLeft } from 'lucide-react';
 import { vendorsApi, uploadsApi } from '@/lib/api';
 import { toast } from 'sonner';
@@ -117,7 +118,7 @@ export default function VendorSettingsPage() {
             <div className="w-20 h-20 rounded-2xl flex-shrink-0 overflow-hidden flex items-center justify-center"
               style={{ background: 'var(--surface-alt)', border: '2px dashed var(--border-color)' }}>
               {form.logo ? (
-                <img src={form.logo} alt="logo" className="w-full h-full object-cover" />
+                <Image src={form.logo} alt="logo" width={80} height={80} unoptimized className="w-full h-full object-cover" />
               ) : (
                 <Store className="w-8 h-8 text-[var(--text-faint)]" />
               )}
@@ -147,7 +148,7 @@ export default function VendorSettingsPage() {
           </div>
           {form.banner && (
             <div className="w-full h-28 rounded-xl overflow-hidden" style={{ border: '1px solid var(--border-color)' }}>
-              <img src={form.banner} alt="banner" className="w-full h-full object-cover" />
+              <Image src={form.banner} alt="banner" width={800} height={112} unoptimized className="w-full h-full object-cover" />
             </div>
           )}
           <input value={form.banner} onChange={e => setForm(p => ({ ...p, banner: e.target.value }))}

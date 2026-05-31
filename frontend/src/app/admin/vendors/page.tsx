@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import React, { Suspense, useState } from 'react';
+import Image from 'next/image';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { CheckCircle, XCircle, DollarSign, Plus, X, Loader2, Pencil, Store } from 'lucide-react';
 import { vendorsApi, authApi } from '@/lib/api';
@@ -255,9 +256,8 @@ function AdminVendorsContent() {
                   placeholder="https://res.cloudinary.com/..."
                   className={FIELD_CLS} />
                 {editForm.logo && (
-                  <img src={editForm.logo} alt="logo preview"
-                    className="mt-2 h-12 w-12 rounded-xl object-cover border border-[var(--border-color)]"
-                    onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                  <Image src={editForm.logo} alt="logo preview" width={48} height={48} unoptimized
+                    className="mt-2 h-12 w-12 rounded-xl object-cover border border-[var(--border-color)]" />
                 )}
               </div>
               <div>

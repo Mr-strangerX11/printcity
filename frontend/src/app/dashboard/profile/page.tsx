@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
+import Image from 'next/image';
 import { Camera, Loader2, User, Mail, Phone, Lock, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { authApi, uploadsApi } from '@/lib/api';
@@ -85,7 +86,7 @@ export default function ProfilePage() {
         <div className="flex items-center gap-5">
           <div className="relative flex-shrink-0">
             {avatar ? (
-              <img src={avatar} alt={user?.name}
+              <Image src={avatar} alt={user?.name ?? 'avatar'} width={80} height={80} unoptimized
                 className="w-20 h-20 rounded-2xl object-cover"
                 style={{ border: '2px solid var(--border-color)' }} />
             ) : (
@@ -117,22 +118,30 @@ export default function ProfilePage() {
         style={{ background: 'var(--surface)', borderColor: 'var(--border-color)' }}>
         <h2 className="font-black text-[var(--text-heading)]">Personal Information</h2>
 
-        {[
-          { label: 'Full Name', icon: <User />, type: 'text', value: name, setter: setName, placeholder: 'Your full name' },
-          { label: 'Email Address', icon: <Mail />, type: 'email', value: email, setter: setEmail, placeholder: 'you@example.com' },
-          { label: 'Phone Number', icon: <Phone />, type: 'tel', value: phone, setter: setPhone, placeholder: '+977 98XXXXXXXX' },
-        ].map(({ label, icon, type, value, setter, placeholder }) => (
-          <div key={label}>
-            <label className="block text-sm font-semibold text-[var(--text-body)] mb-1.5">{label}</label>
-            <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-faint)]">
-                {React.cloneElement(icon as React.ReactElement, { className: 'w-4 h-4' })}
-              </span>
-              <input type={type} value={value} onChange={e => setter(e.target.value)}
-                placeholder={placeholder} className={FIELD_CLS} style={FIELD_STYLE} />
-            </div>
+        <div>
+          <label className="block text-sm font-semibold text-[var(--text-body)] mb-1.5">Full Name</label>
+          <div className="relative">
+            <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-faint)]" />
+            <input type="text" value={name} onChange={e => setName(e.target.value)}
+              placeholder="Your full name" className={FIELD_CLS} style={FIELD_STYLE} />
           </div>
-        ))}
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-[var(--text-body)] mb-1.5">Email Address</label>
+          <div className="relative">
+            <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-faint)]" />
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+              placeholder="you@example.com" className={FIELD_CLS} style={FIELD_STYLE} />
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-[var(--text-body)] mb-1.5">Phone Number</label>
+          <div className="relative">
+            <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-faint)]" />
+            <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
+              placeholder="+977 98XXXXXXXX" className={FIELD_CLS} style={FIELD_STYLE} />
+          </div>
+        </div>
 
         <div className="flex items-center justify-between pt-1">
           <p className="text-xs text-[var(--text-faint)]">
