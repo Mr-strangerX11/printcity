@@ -69,16 +69,18 @@ export async function createNestApp(AppModuleClass = ActiveModule): Promise<Nest
       ? true
       : (origin: string | undefined, cb: (e: Error | null, allow?: boolean) => void) => {
           if (!origin) return cb(null, true);
-          // Allow comma-separated FRONTEND_URL values and all *.vercel.app previews
+          // Comma-separated FRONTEND_URL list (supports custom domains + both www/non-www)
           const allowed = (process.env.FRONTEND_URL ?? '').split(',').map(u => u.trim()).filter(Boolean);
-          if (allowed.some(u => origin.startsWith(u)) || origin.endsWith('.vercel.app')) {
-            return cb(null, true);
-          }
+          const isAllowed =
+            allowed.some(u => origin === u || origin.startsWith(u)) ||
+            origin.endsWith('.vercel.app') ||
+            origin.endsWith('.printcity.com.np');
+          if (isAllowed) return cb(null, true);
           cb(new Error(`CORS: ${origin} not allowed`));
         },
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'stripe-signature'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'stripe-signature', 'x-csrf-token'],
   });
 
   app.useGlobalPipes(
