@@ -158,6 +158,8 @@ export const vendorsApi = {
   updateProfile: (data: any) => api.patch('/vendors/me/profile', data),
   updateStatus: (id: string, status: string) => api.patch(`/vendors/${id}/status`, { status }),
   updateCommission: (id: string, commissionRate: number) => api.patch(`/vendors/${id}/commission`, { commissionRate }),
+  updateDetails: (id: string, data: { storeName?: string; description?: string; logo?: string; banner?: string }) =>
+    api.patch(`/vendors/${id}`, data),
 };
 
 // ─── Custom Design ────────────────────────────────────────────────────────────

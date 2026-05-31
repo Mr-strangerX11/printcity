@@ -42,4 +42,13 @@ export class VendorsController {
   updateCommission(@Param('id') id: string, @Body('commissionRate') rate: number) {
     return this.svc.updateCommission(id, rate);
   }
+
+  @Patch(':id')
+  @Roles(Role.ADMIN)
+  updateVendorDetails(
+    @Param('id') id: string,
+    @Body() dto: { storeName?: string; description?: string; logo?: string; banner?: string },
+  ) {
+    return this.svc.updateVendorById(id, dto);
+  }
 }

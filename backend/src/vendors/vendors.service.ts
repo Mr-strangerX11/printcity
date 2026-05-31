@@ -92,6 +92,12 @@ export class VendorsService {
     return this.vendorModel.findByIdAndUpdate(vendor._id, dto, { new: true }).exec();
   }
 
+  async updateVendorById(id: string, dto: { storeName?: string; description?: string; logo?: string; banner?: string }) {
+    const vendor = await this.vendorModel.findByIdAndUpdate(id, dto, { new: true }).exec();
+    if (!vendor) throw new NotFoundException('Vendor not found');
+    return vendor;
+  }
+
   async createVendor(userId: string, storeName: string) {
     let storeSlug = slugify(storeName, { lower: true, strict: true });
     // Ensure slug uniqueness with a numeric suffix when there's a collision
