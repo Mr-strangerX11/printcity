@@ -99,7 +99,7 @@ export class ProductsService {
 
     const [primaryImages, allVariants, vendors, categories] = await Promise.all([
       this.imageModel.find({ productId: { $in: productIds }, isPrimary: true }).lean().exec(),
-      this.variantModel.find({ productId: { $in: productIds } }, { price: 1, color: 1, size: 1 }).lean().exec(),
+      this.variantModel.find({ productId: { $in: productIds } }, { price: 1, color: 1, size: 1, productId: 1 }).lean().exec(),
       this.vendorModel.find({ _id: { $in: vendorIds } }, { storeName: 1, storeSlug: 1 }).lean().exec(),
       this.categoryModel.find({ _id: { $in: categoryIds } }, { name: 1, slug: 1 }).lean().exec(),
     ]);

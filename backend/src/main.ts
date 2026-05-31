@@ -32,6 +32,17 @@ export async function createNestApp(AppModuleClass = ActiveModule): Promise<Nest
   expressApp.get('/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
+  // /api alone has no NestJS controller — return useful info instead of 404
+  expressApp.get('/api', (_req, res) => {
+    res.json({
+      name: 'PrintCity API',
+      version: '1.0.0',
+      status: 'running',
+      docs: '/docs',
+      health: '/health',
+      note: 'API routes are at /api/<resource> e.g. /api/products, /api/auth/login',
+    });
+  });
   // Silence browser favicon requests
   expressApp.get('/favicon.ico', (_req, res) => res.status(204).end());
   expressApp.get('/favicon.png', (_req, res) => res.status(204).end());
