@@ -40,16 +40,22 @@ export default function AdminDashboard() {
   // Existing hooks
   const { data: ordersData, loading: ordersLoading } = useOrders({ limit: 10 });
   const { data: orderStats } = useOrderStats();
-  const { data: pendingVendors = [], refetch: refetchVendors } = useVendors({ status: 'PENDING', limit: 5 });
+  const { data: rawPendingVendors, refetch: refetchVendors } = useVendors({ status: 'PENDING', limit: 5 });
+  const pendingVendors = rawPendingVendors ?? [];
   const { data: productsData } = useProducts({ limit: 1 });
 
-  // Analytics hooks (require new backend module)
+  // Analytics hooks — use ?? [] not = [] because useFetch returns null (not undefined) on error
   const { data: kpis, loading: kpisLoading } = useAdminKpis(period);
-  const { data: revenueData = [], loading: revenueLoading } = useRevenueAnalytics(period);
-  const { data: orderStatusData = [] } = useOrdersByStatus();
-  const { data: vendorsRevenue = [] } = useVendorsRevenue(10, period);
-  const { data: paymentData = [] } = usePaymentMethods();
+  const { data: rawRevenue, loading: revenueLoading } = useRevenueAnalytics(period);
+  const { data: rawOrderStatus } = useOrdersByStatus();
+  const { data: rawVendorsRevenue } = useVendorsRevenue(10, period);
+  const { data: rawPaymentData } = usePaymentMethods();
   const { data: health } = useSystemHealth();
+
+  const revenueData = rawRevenue ?? [];
+  const orderStatusData = rawOrderStatus ?? [];
+  const vendorsRevenue = rawVendorsRevenue ?? [];
+  const paymentData = rawPaymentData ?? [];
 
   const recentOrders = ordersData?.items ?? [];
 

@@ -61,7 +61,8 @@ export default function CustomerDashboard() {
   const { data: unreadCount = 0 } = useUnreadCount();
   const { data: loyaltyPoints } = useLoyaltyPoints();
   const { data: loyaltyTier } = useLoyaltyTier();
-  const { data: rewards = [] } = useLoyaltyRewards();
+  const { data: rawRewards } = useLoyaltyRewards();
+  const rewards = rawRewards ?? [];
   const { data: referralCode } = useReferralCode();
   const { data: referralStats } = useReferralStats();
   const { data: recommendedData } = useProducts({ limit: 6, sort: 'popular', status: 'ACTIVE' });

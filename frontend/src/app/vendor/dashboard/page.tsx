@@ -45,7 +45,8 @@ export default function VendorDashboard() {
   const { data: vendorProfile, loading: l3 } = useVendorProfile();
   const { data: payoutsData, loading: l4 } = usePayouts({ limit: 3 });
   const { data: vendorSales, loading: salesLoading } = useVendorSales(period);
-  const { data: orderStatusData = [] } = useVendorOrdersByStatus();
+  const { data: rawOrderStatusData } = useVendorOrdersByStatus();
+  const orderStatusData = rawOrderStatusData ?? [];
   const { data: ordersData } = useOrders({ limit: 5 });
 
   const products = productsData?.items ?? [];
