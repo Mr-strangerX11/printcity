@@ -1,7 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import dynamic from 'next/dynamic';
 import {
   ArrowRight, Shield, Truck, Star, ChevronRight,
   Palette, Upload, ShoppingBag, Sparkles, Package, Users,
@@ -11,13 +10,14 @@ import { Navbar } from '@/components/layout/Navbar';
 import { CategoryBar } from '@/components/layout/CategoryBar';
 import { Footer } from '@/components/layout/Footer';
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
-
-// Framer-motion components must be client-side only to avoid React 19 hydration mismatch
-const SocialProofCounter = dynamic(() => import('@/components/sections/SocialProofCounter'), { ssr: false });
-const LoyaltyRewardsSection = dynamic(() => import('@/components/sections/LoyaltyRewardsSection'), { ssr: false });
-const ComparisonTable = dynamic(() => import('@/components/sections/ComparisonTable'), { ssr: false });
-const VendorSuccessStories = dynamic(() => import('@/components/sections/VendorSuccessStories'), { ssr: false });
-const QuickFAQ = dynamic(() => import('@/components/sections/QuickFAQ'), { ssr: false });
+// Client wrapper holds ssr:false dynamic imports (not valid in Server Components directly)
+import {
+  SocialProofCounter,
+  LoyaltyRewardsSection,
+  ComparisonTable,
+  VendorSuccessStories,
+  QuickFAQ,
+} from '@/components/sections/AnimatedSections';
 
 async function getHomeData() {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
