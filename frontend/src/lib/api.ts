@@ -33,14 +33,18 @@ api.interceptors.response.use(
   (res) => res,
   async (error) => {
     const original = error.config;
-    // Don't attempt refresh for any /auth/* endpoint:
-    //  - /auth/me      → 401 means not logged in (normal)
-    //  - /auth/login   → 401 means wrong credentials (not an expired token)
-    //  - /auth/refresh → 401 means refresh token is gone
-    //  - /auth/register, /auth/verify-otp etc. → all public, no token needed
+    // Block refresh only for public auth endpoints where 401 = bad input, not expired token.
+    // /auth/me is intentionally NOT in this list — a 401 there may mean an expired access
+    // token that a silent refresh can fix, keeping the user logged in.
     const url: string = original.url ?? '';
-    const isAuthRoute = url.includes('/auth/');
-    if (error.response?.status === 401 && !original._retry && !isAuthRoute) {
+    const SKIP_REFRESH = [
+      '/auth/login', '/auth/register', '/auth/logout', '/auth/refresh',
+      '/auth/verify-otp', '/auth/resend-otp',
+      '/auth/forgot-password', '/auth/reset-password', '/auth/csrf-token',
+      '/auth/google',
+    ];
+    const skipRefresh = SKIP_REFRESH.some(p => url.includes(p));
+    if (error.response?.status === 401 && !original._retry && !skipRefresh) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           refreshQueue.push({
