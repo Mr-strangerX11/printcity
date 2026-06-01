@@ -2,16 +2,17 @@
 
 export const dynamic = 'force-dynamic';
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useOrders } from '@/hooks';
 import { OrderStatus } from '@/types';
 import { formatPrice, formatDate } from '@/lib/utils';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import { Package } from 'lucide-react';
+import { Package, RefreshCw } from 'lucide-react';
 
 const STATUSES: OrderStatus[] = ['PENDING','CONFIRMED','PRINTING','PACKED','SHIPPED','DELIVERED','CANCELLED','REFUNDED'];
+const POLL_INTERVAL = 30_000; // refresh every 30 s so new orders appear automatically
 
 function AdminOrdersContent() {
   const searchParams = useSearchParams();
@@ -19,9 +20,20 @@ function AdminOrdersContent() {
   const status = searchParams.get('status') ?? '';
   const page = Number(searchParams.get('page') ?? 1);
 
-  const { data, loading } = useOrders({ status: status || undefined, page, limit: 20 });
+  const { data, loading, refetch } = useOrders(
+    { status: status || undefined, page, limit: 20 },
+    { ttl: 0 }, // always fetch fresh; admin panel must never serve stale orders
+  );
   const orders = data?.items ?? [];
-  const total = data?.meta.total ?? 0;
+  const total  = data?.meta.total ?? 0;
+
+  // Auto-poll so orders placed by customers appear without a manual refresh
+  const refetchRef = useRef(refetch);
+  refetchRef.current = refetch;
+  useEffect(() => {
+    const id = setInterval(() => refetchRef.current(), POLL_INTERVAL);
+    return () => clearInterval(id);
+  }, []);
 
   const setStatus = (s: string) => {
     const p = new URLSearchParams();
@@ -32,8 +44,19 @@ function AdminOrdersContent() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-black text-[var(--text-heading)]">Orders</h1>
-        <span className="text-sm text-[var(--text-muted)] tabular-nums">{total.toLocaleString()} total</span>
+        <div>
+          <h1 className="text-2xl font-black text-[var(--text-heading)]">Orders</h1>
+          <p className="text-xs text-[var(--text-faint)] mt-0.5">{total.toLocaleString()} total · refreshes every 30 s</p>
+        </div>
+        <button
+          onClick={refetch}
+          disabled={loading}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all hover:bg-[var(--hover-bg)] disabled:opacity-50"
+          style={{ border: '1px solid var(--border-color)', color: 'var(--text-body)' }}
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </button>
       </div>
 
       {/* ── Status filter pills ── */}
@@ -74,7 +97,7 @@ function AdminOrdersContent() {
               </tr>
             </thead>
             <tbody className="divide-y" style={{ borderColor: 'var(--border-color)' }}>
-              {loading ? (
+              {loading && orders.length === 0 ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <tr key={i}>
                     <td colSpan={8} className="px-4 py-4">
@@ -89,10 +112,12 @@ function AdminOrdersContent() {
                     <p className="text-[var(--text-muted)] text-sm">No orders found</p>
                   </td>
                 </tr>
-              ) : orders.map(order => (
-                <tr key={order.id} className="hover:bg-[var(--hover-bg)] transition-colors">
+              ) : orders.map(order => {
+                const oid = order.id ?? (order as any)._id ?? '';
+                return (
+                <tr key={oid} className="hover:bg-[var(--hover-bg)] transition-colors">
                   <td className="px-4 py-3 font-semibold text-[var(--text-heading)] text-sm font-mono">
-                    #{order.id.slice(-8).toUpperCase()}
+                    #{oid.toString().slice(-8).toUpperCase()}
                   </td>
                   <td className="px-4 py-3 text-sm text-[var(--text-body)] hidden md:table-cell">
                     {order.user?.name ?? '—'}
@@ -113,13 +138,16 @@ function AdminOrdersContent() {
                     <StatusBadge status={order.orderStatus} type="order" />
                   </td>
                   <td className="px-4 py-3">
-                    <Link href={`/admin/orders/${order.id}`}
-                      className="text-xs font-semibold text-purple-600 hover:text-purple-700 transition-colors">
+                    <Link
+                      href={`/admin/orders/${oid}`}
+                      className="text-xs font-semibold text-purple-600 hover:text-purple-700 transition-colors"
+                    >
                       View
                     </Link>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

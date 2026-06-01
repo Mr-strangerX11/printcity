@@ -24,6 +24,23 @@ import { ProductVariant, ProductVariantDocument } from '../products/schemas/prod
 import { ProductImage, ProductImageDocument } from '../products/schemas/product-image.schema';
 import { Payment, PaymentDocument } from '../payments/schemas/payment.schema';
 
+/**
+ * lean() skips Mongoose virtuals, so _id is present but id is not.
+ * Also, populate('userId') keeps the field named `userId` while the frontend
+ * Order type expects a `user` field. This helper normalises both issues.
+ */
+function normalizeOrder(order: any, extra: Record<string, unknown> = {}): any {
+  const { _id, userId, ...rest } = order;
+  const isPopulated = userId && typeof userId === 'object' && 'name' in userId;
+  return {
+    id: _id?.toString(),
+    ...rest,
+    userId: isPopulated ? (userId as any)._id?.toString() : userId?.toString(),
+    user: isPopulated ? { name: (userId as any).name, email: (userId as any).email } : undefined,
+    ...extra,
+  };
+}
+
 export class CheckoutDto {
   shippingName: string;
   shippingPhone: string;
@@ -308,8 +325,7 @@ export class OrdersService {
       paymentByOrder.set(p.orderId.toString(), p);
     }
 
-    const items = orders.map(order => ({
-      ...order,
+    const items = orders.map(order => normalizeOrder(order, {
       items: itemsByOrder.get(order._id.toString()) ?? [],
       payment: paymentByOrder.get(order._id.toString()) ?? null,
     }));
@@ -320,18 +336,21 @@ export class OrdersService {
   async findOne(id: string, userId: string, role: Role): Promise<any> {
     const order = await this.orderModel
       .findById(id)
-      .populate('userId', 'name email')
+      .populate('userId', 'name email phone')
       .lean()
       .exec();
     if (!order) throw new NotFoundException('Order not found');
-    if (role === Role.CUSTOMER && order.userId.toString() !== userId) throw new ForbiddenException();
+
+    // Access check: compare raw userId string (before normalizeOrder overwrites userId)
+    const rawUserId = (order.userId as any)?._id?.toString() ?? order.userId?.toString();
+    if (role === Role.CUSTOMER && rawUserId !== userId) throw new ForbiddenException();
 
     const [orderItems, payment] = await Promise.all([
       this.orderItemModel.find({ orderId: new Types.ObjectId(id) }).lean().exec(),
       this.paymentModel.findOne({ orderId: new Types.ObjectId(id) }).lean().exec(),
     ]);
 
-    return { ...order, items: orderItems, payment };
+    return normalizeOrder(order, { items: orderItems, payment });
   }
 
   private static readonly VALID_TRANSITIONS: Partial<Record<OrderStatus, OrderStatus[]>> = {
