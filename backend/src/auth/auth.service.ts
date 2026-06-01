@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   UnauthorizedException,
   ConflictException,
   BadRequestException,
@@ -20,6 +21,8 @@ import slugify from 'slugify';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private users: UserService,
     private jwt: JwtService,
@@ -30,6 +33,21 @@ export class AuthService {
 
   async register(dto: RegisterDto) {
     const existing = await this.users.findByEmail(dto.email);
+
+    // If account exists but is still unverified, re-issue a fresh OTP and try to resend
+    if (existing && !existing.isVerified) {
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+      await this.users.update(existing.id, { verificationOtp: otp, verificationOtpExpiry: otpExpiry } as any);
+      let emailDeliveryFailed = false;
+      try {
+        await this.mail.sendVerificationOtp(existing.email, existing.name, otp);
+      } catch {
+        emailDeliveryFailed = true;
+      }
+      return { requiresVerification: true, email: existing.email, emailDeliveryFailed };
+    }
+
     if (existing) throw new ConflictException('Email already registered');
 
     if (dto.role === Role.VENDOR && !dto.storeName) {
@@ -62,17 +80,20 @@ export class AuthService {
       );
     }
 
+    // Try to send verification email — on failure keep the account so the user can
+    // request a resend from the verify-email page instead of getting a blank 500.
+    let emailDeliveryFailed = false;
     try {
       await this.mail.sendVerificationOtp(user.email, user.name, otp);
     } catch (err: any) {
-      // Account was created but email failed — delete the user so they can retry
-      await this.users.delete(user.id).catch(() => {});
-      throw new InternalServerErrorException(
-        'Account created but verification email could not be sent. Please check your email address or try again later.',
+      emailDeliveryFailed = true;
+      this.logger.warn(
+        `Verification email delivery failed for ${user.email}: ${err?.message ?? err}. ` +
+        `User account kept — they can use resend OTP.`,
       );
     }
 
-    return { requiresVerification: true, email: user.email };
+    return { requiresVerification: true, email: user.email, emailDeliveryFailed };
   }
 
   async login(dto: LoginDto) {

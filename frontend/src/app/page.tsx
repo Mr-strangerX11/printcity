@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import dynamic from 'next/dynamic';
 import {
   ArrowRight, Shield, Truck, Star, ChevronRight,
   Palette, Upload, ShoppingBag, Sparkles, Package, Users,
@@ -10,19 +11,21 @@ import { Navbar } from '@/components/layout/Navbar';
 import { CategoryBar } from '@/components/layout/CategoryBar';
 import { Footer } from '@/components/layout/Footer';
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
-import SocialProofCounter from '@/components/sections/SocialProofCounter';
-import LoyaltyRewardsSection from '@/components/sections/LoyaltyRewardsSection';
-import ComparisonTable from '@/components/sections/ComparisonTable';
-import VendorSuccessStories from '@/components/sections/VendorSuccessStories';
-import QuickFAQ from '@/components/sections/QuickFAQ';
+
+// Framer-motion components must be client-side only to avoid React 19 hydration mismatch
+const SocialProofCounter = dynamic(() => import('@/components/sections/SocialProofCounter'), { ssr: false });
+const LoyaltyRewardsSection = dynamic(() => import('@/components/sections/LoyaltyRewardsSection'), { ssr: false });
+const ComparisonTable = dynamic(() => import('@/components/sections/ComparisonTable'), { ssr: false });
+const VendorSuccessStories = dynamic(() => import('@/components/sections/VendorSuccessStories'), { ssr: false });
+const QuickFAQ = dynamic(() => import('@/components/sections/QuickFAQ'), { ssr: false });
 
 async function getHomeData() {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
   try {
     const [productsRes, categoriesRes, vendorsRes] = await Promise.all([
-      fetch(`${baseUrl}/products?limit=8&status=ACTIVE`, { next: { revalidate: 60 } }),
-      fetch(`${baseUrl}/categories`, { next: { revalidate: 300 } }),
-      fetch(`${baseUrl}/vendors?status=ACTIVE&limit=6`, { next: { revalidate: 120 } }),
+      fetch(`${baseUrl}/products?limit=8&status=ACTIVE`, { next: { revalidate: 30 } }),
+      fetch(`${baseUrl}/categories`, { next: { revalidate: 60 } }),
+      fetch(`${baseUrl}/vendors?status=ACTIVE&limit=6`, { next: { revalidate: 30 } }),
     ]);
     const [products, categories, vendors] = await Promise.all([
       productsRes.ok ? productsRes.json() : null,
