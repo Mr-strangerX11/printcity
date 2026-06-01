@@ -6,6 +6,7 @@ import {
   BadRequestException,
   NotFoundException,
   InternalServerErrorException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -230,7 +231,14 @@ export class AuthService {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
     await this.users.update(user.id, { verificationOtp: otp, verificationOtpExpiry: otpExpiry } as any);
-    await this.mail.sendVerificationOtp(user.email, user.name, otp);
+    try {
+      await this.mail.sendVerificationOtp(user.email, user.name, otp);
+    } catch (err: any) {
+      this.logger.error(`resendOtp: email delivery failed for ${user.email}: ${err?.message ?? err}`);
+      throw new ServiceUnavailableException(
+        'Email delivery failed. Please check your email address or try again in a few minutes.',
+      );
+    }
     return { message: 'OTP resent successfully' };
   }
 
@@ -241,7 +249,12 @@ export class AuthService {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 min
     await this.users.update(user.id, { verificationOtp: otp, verificationOtpExpiry: expiry } as any);
-    await this.mail.sendPasswordResetOtp(user.email, user.name, otp);
+    try {
+      await this.mail.sendPasswordResetOtp(user.email, user.name, otp);
+    } catch (err: any) {
+      this.logger.error(`forgotPassword: email delivery failed for ${user.email}: ${err?.message ?? err}`);
+      // Return success anyway — prevents email enumeration, user sees generic message
+    }
     return { message: 'If that email exists, a reset code has been sent.' };
   }
 
